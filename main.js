@@ -37,7 +37,6 @@ function createWindow() {
   // Show window once content is ready
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
-    mainWindow.webContents.openDevTools();
   });
 
   mainWindow.on('closed', () => {
