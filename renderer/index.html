@@ -43,7 +43,7 @@
      SIDEBAR
 ════════════════════════════════════════════════════════════════════════════ -->
   <div class="app-shell">
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar">
       <div class="sidebar-brand">
         <div class="sidebar-logo">
           <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
@@ -58,99 +58,34 @@
         </div>
       </div>
 
-      <!-- Stats Cards -->
-      <div class="stat-grid">
-        <div class="stat-card">
-          <div class="stat-value" id="stat-total">0</div>
-          <div class="stat-label">Total Files</div>
-          <div class="stat-icon stat-icon--total">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path
-                d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
-              </path>
-              <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-              <line x1="12" y1="22.08" x2="12" y2="12"></line>
-            </svg>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value" id="stat-converted">0</div>
-          <div class="stat-label">Converted</div>
-          <div class="stat-icon stat-icon--success">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value" id="stat-skipped">0</div>
-          <div class="stat-label">Skipped</div>
-          <div class="stat-icon stat-icon--skip">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <rect x="6" y="4" width="4" height="16"></rect>
-              <rect x="14" y="4" width="4" height="16"></rect>
-            </svg>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value" id="stat-failed">0</div>
-          <div class="stat-label">Failed</div>
-          <div class="stat-icon stat-icon--fail">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </div>
-        </div>
-      </div>
-
-      <!-- Session Info -->
-      <div class="sidebar-section">
-        <div class="sidebar-section-title">Session</div>
-        <div class="info-row">
-          <span class="info-label">Status</span>
-          <span class="badge badge--idle" id="session-status">Idle</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Est. Time</span>
-          <span class="info-value" id="eta-display">—</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Elapsed</span>
-          <span class="info-value" id="elapsed-display">—</span>
-        </div>
-      </div>
-
-      <!-- Actions -->
-      <div class="sidebar-section sidebar-section--actions">
-        <div class="sidebar-section-title">Export</div>
-        <button class="btn btn--ghost btn--full" id="btn-save-folder" disabled>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
-            <polyline points="17 21 17 13 7 13 7 21" />
-            <polyline points="7 3 7 8 15 8" />
-          </svg>
-          Save to Folder
+      <nav class="sidebar-nav">
+        <button class="nav-item active" data-view="home">
+          <span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg></span>
+          <span class="nav-label">Home</span>
         </button>
-        <button class="btn btn--ghost btn--full" id="btn-export-zip" disabled>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-            <polyline points="7 10 12 15 17 10" />
-            <line x1="12" y1="15" x2="12" y2="3" />
-          </svg>
-          Export as ZIP
+        <button class="nav-item" data-view="library">
+          <span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg></span>
+          <span class="nav-label">Library</span>
         </button>
-      </div>
+        <button class="nav-item" data-view="collections">
+          <span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg></span>
+          <span class="nav-label">Collections</span>
+        </button>
+        <button class="nav-item" data-view="recent">
+          <span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></span>
+          <span class="nav-label">Recently Read</span>
+        </button>
+        <button class="nav-item" data-view="favorites">
+          <span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></span>
+          <span class="nav-label">Favorites</span>
+        </button>
+      </nav>
 
-      <!-- Theme Toggle -->
-      <div class="sidebar-footer">
-        <button class="theme-toggle" id="btn-theme" title="Toggle theme">
-          <span class="theme-toggle-track">
-            <span class="theme-toggle-thumb"></span>
-          </span>
-          <span id="theme-label">Light Mode</span>
+      <div class="sidebar-footer" style="margin-top: auto; display: flex; flex-direction: column; gap: 8px;">
+        <button class="nav-item" data-view="settings">
+          <span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></span>
+          <span class="nav-label">Settings</span>
         </button>
-        <div class="credit">Built by <strong>Raunak Panigrahi</strong></div>
       </div>
     </aside>
 
@@ -158,122 +93,124 @@
        MAIN CONTENT
   ══════════════════════════════════════════════════════════════════════ -->
     <main class="main-content">
-
-      <!-- Drop Zone / Upload Area -->
-      <div class="upload-area" id="upload-area">
-        <div class="upload-zone" id="drop-zone">
-          <div class="upload-zone-inner" id="upload-zone-inner">
-            <div class="upload-icon-wrapper">
-              <svg class="upload-icon" width="48" height="48" viewBox="0 0 24 24" fill="none">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="url(#upload-grad)" stroke-width="2"
-                  stroke-linecap="round" stroke-linejoin="round"></path>
-                <polyline points="17 8 12 3 7 8" stroke="url(#upload-grad)" stroke-width="2" stroke-linecap="round"
-                  stroke-linejoin="round"></polyline>
-                <line x1="12" y1="3" x2="12" y2="15" stroke="url(#upload-grad)" stroke-width="2" stroke-linecap="round"
-                  stroke-linejoin="round"></line>
-                <defs>
-                  <linearGradient id="upload-grad" x1="0" y1="0" x2="0" y2="24" gradientUnits="userSpaceOnUse">
-                    <stop stop-color="#b886ff" />
-                    <stop offset="1" stop-color="#6e56e9" />
-                  </linearGradient>
-                </defs>
-              </svg>
+      <div id="page-home" class="page-view active">
+        <h1 class="page-title">Home</h1>
+        <div class="home-dashboard">
+          <section class="home-section">
+            <h2 class="section-title">Recent Reads</h2>
+            <div class="book-carousel" id="home-recent-grid"></div>
+          </section>
+          <section class="home-section">
+            <div class="section-header">
+              <h2 class="section-title">Favorite Books</h2>
+              <button class="btn btn--ghost btn--sm" data-goto="favorites">See more ></button>
             </div>
-            <div class="upload-title">Drag & Drop Ebooks Here</div>
-            <div class="upload-subtitle">Supports PDF & EPUB files</div>
-          </div>
+            <div class="book-carousel" id="home-favorites-row"></div>
+          </section>
+          <section class="home-section">
+            <div class="section-header">
+              <h2 class="section-title">Recently Added Books</h2>
+              <button class="btn btn--ghost btn--sm" data-goto="library">See more ></button>
+            </div>
+            <div class="book-carousel" id="home-recent-added-row"></div>
+          </section>
         </div>
-        <div class="upload-actions">
-          <button class="btn btn--primary" id="btn-select-folder">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
-            </svg>
-            Select Folder
-          </button>
-          <button class="btn btn--outline" id="btn-select-files">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-              <polyline points="14 2 14 8 20 8" />
-            </svg>
-            Select Files
-          </button>
-        </div>
+      </div>
 
-        <!-- Quick Tips -->
-        <div class="quick-tips">
-          <div class="tips-title">Quick Tips</div>
-          <div class="tips-grid">
-            <div class="tip-card">
-              <div class="tip-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                  stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                  <polyline points="14 2 14 8 20 8"></polyline>
-                  <line x1="16" y1="13" x2="8" y2="13"></line>
-                  <line x1="16" y1="17" x2="8" y2="17"></line>
-                  <polyline points="10 9 9 9 8 9"></polyline>
-                </svg>
-              </div>
-              Supports PDF & EPUB
-            </div>
-            <div class="tip-card">
-              <div class="tip-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                  stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                </svg>
-              </div>
-              Batch Convert Multiple Files
-            </div>
-            <div class="tip-card">
-              <div class="tip-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                  stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
-                  <line x1="12" y1="11" x2="12" y2="17"></line>
-                  <line x1="9" y1="14" x2="15" y2="14"></line>
-                </svg>
-              </div>
-              Drag Entire Folders
+      <div id="page-library" class="page-view hidden">
+        <div class="toolbar" id="toolbar">
+          <div class="toolbar-left">
+            <div class="search-box">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <input type="text" id="search-input" placeholder="Search books, authors..." />
             </div>
           </div>
+          <div class="toolbar-right">
+            <div class="toolbar-filters">
+              <label>Sort by:</label>
+              <select id="library-sort" class="dropdown-filter">
+                <option value="name">Title</option>
+                <option value="author">Author</option>
+                <option value="dateAdded" selected>Date Added</option>
+              </select>
+              <label>Format:</label>
+              <button class="filter-tab active" data-filter="all">All</button>
+              <button class="filter-tab" data-filter="pdf">PDF</button>
+              <button class="filter-tab" data-filter="epub">EPUB</button>
+            </div>
+            <button class="btn btn--primary" id="btn-add-books" title="Import Ebooks">
+              + Add Books
+            </button>
+          </div>
+        </div>
+
+        <div class="book-grid" id="library-grid"></div>
+
+        <!-- Hidden elements required by existing script.js -->
+        <div class="hidden">
+          <div id="upload-area"></div>
+          <div id="drop-zone"><div id="upload-zone-inner"></div></div>
+          <div id="table-wrapper"><table id="file-table"><tbody id="file-table-body"></tbody></table></div>
+          <button id="btn-select-folder"></button>
+          <button id="btn-select-files"></button>
+          <button id="btn-start-conversion"></button>
+          <button id="btn-cancel-conversion"></button>
+          <button id="btn-add-folder"></button>
+          <button id="btn-add-files"></button>
+          <span id="file-list-header-text"></span>
+          <div id="table-empty"></div>
+        </div>
+
+        <!-- Warning Banner -->
+        <div class="warning-banner hidden" id="warning-banner">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+          <span id="warning-text"></span>
+          <button class="warning-dismiss" id="btn-dismiss-warning">×</button>
         </div>
       </div>
 
-      <!-- Warning Banner -->
-      <div class="warning-banner hidden" id="warning-banner">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-          <line x1="12" y1="9" x2="12" y2="13" />
-          <line x1="12" y1="17" x2="12.01" y2="17" />
-        </svg>
-        <span id="warning-text"></span>
-        <button class="warning-dismiss" id="btn-dismiss-warning">×</button>
+      <div id="page-recent" class="page-view hidden">
+        <h1 class="page-title">Recently Read</h1>
+        <div class="book-grid" id="recent-grid"></div>
       </div>
 
-      <!-- Toolbar / File List Header -->
-      <div class="toolbar hidden" id="toolbar">
-        <div class="toolbar-left">
-          <div class="toolbar-title" id="file-list-header-text">0 files loaded</div>
+      <div id="page-favorites" class="page-view hidden">
+        <h1 class="page-title">Favorites</h1>
+        <div class="book-grid" id="favorites-grid"></div>
+      </div>
+
+      <div id="page-collections" class="page-view hidden">
+        <h1 class="page-title">Collections</h1>
+        <div class="book-grid" id="collections-grid"></div>
+      </div>
+
+      <div id="page-settings" class="page-view hidden">
+        <h1 class="page-title">Settings</h1>
+        <div class="settings-panel">
+          <div class="settings-group">
+            <label>App Theme</label>
+            <button class="theme-toggle" id="btn-theme" title="Toggle theme">
+              <span class="theme-toggle-track">
+                <span class="theme-toggle-thumb"></span>
+              </span>
+              <span id="theme-label">Light Mode</span>
+            </button>
+          </div>
         </div>
-        <div class="toolbar-right">
-          <button class="btn btn--primary" id="btn-start-conversion" disabled>
-            Convert Files
-          </button>
-          <button class="btn btn--danger hidden" id="btn-cancel-conversion">
-            Cancel
-          </button>
-          <button class="btn btn--outline" id="btn-add-folder">
-            Select Folder
-          </button>
-          <button class="btn btn--outline" id="btn-add-files">
-            Select Files
-          </button>
+        
+        <!-- Stats hidden for backward compatibility -->
+        <div class="hidden">
+           <span id="stat-total">0</span><span id="stat-converted">0</span><span id="stat-skipped">0</span><span id="stat-failed">0</span>
+           <span id="session-status">Idle</span><span id="eta-display">—</span><span id="elapsed-display">—</span>
+           <button id="btn-save-folder"></button><button id="btn-export-zip"></button>
         </div>
       </div>
 
-      <!-- Progress Bar -->
+      <!-- Global Progress Bar for Conversion -->
       <div class="progress-section hidden" id="progress-section">
         <div class="progress-header">
           <span class="progress-label" id="progress-label">Converting…</span>
@@ -289,36 +226,29 @@
         </div>
       </div>
 
-      <!-- File Table -->
-      <div class="table-wrapper hidden" id="table-wrapper">
-        <table class="file-table" id="file-table">
-          <thead>
-            <tr>
-              <th class="col-cover">Cover</th>
-              <th class="col-name sortable" data-sort="name">
-                File Name
-              </th>
-              <th class="col-type">Type</th>
-              <th class="col-size sortable" data-sort="size">
-                Size
-              </th>
-              <th class="col-status">Status</th>
-              <th class="col-action">Action</th>
-            </tr>
-          </thead>
-          <tbody id="file-table-body">
-          </tbody>
-        </table>
-        <div class="table-empty hidden" id="table-empty">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5">
-            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-            <polyline points="14 2 14 8 20 8" />
-            <line x1="8" y1="13" x2="16" y2="13" />
-            <line x1="8" y1="17" x2="12" y2="17" />
-          </svg>
-          <p>No matching files</p>
+      <!-- Book Card Template -->
+      <template id="template-book-card">
+        <div class="book-card">
+          <div class="book-cover-container">
+            <img class="book-cover" src="" alt="Cover" />
+            <div class="book-cover-placeholder"></div>
+            <div class="book-overlay">
+              <button class="overlay-btn overlay-btn-read" title="Read"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg></button>
+              <button class="overlay-btn overlay-btn-fav" title="Favorite"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></button>
+              <button class="overlay-btn overlay-btn-remove" title="Remove"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
+            </div>
+            <div class="book-badges">
+              <span class="badge-format">PDF</span>
+              <span class="fav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></span>
+            </div>
+          </div>
+          <div class="progress-bar-small"><div class="progress-bar-fill"></div></div>
+          <div class="book-info">
+            <div class="book-title"></div>
+            <div class="book-author">Unknown Author</div>
+          </div>
         </div>
-      </div>
+      </template>
 
     </main>
   </div>

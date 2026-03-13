@@ -1230,12 +1230,275 @@ function onReaderPrev() {
   }
 }
 
-function onReaderNext() {
-  if (state.reader.type === 'epub') {
-    state.reader.rendition?.next();
-  } else if (state.reader.type === 'pdf') {
-    if (state.reader.pageNum >= state.reader.pageCount) return;
-    state.reader.pageNum++;
-    renderPdfPage(state.reader.pageNum);
+/* ══════════════════════════════════════════════════════════════
+   PHASE 2 & 3: NEW LAYOUT, NAVIGATION & RENDERING LOGIC
+══════════════════════════════════════════════════════════════ */
+
+state.currentView = 'home';
+state.collections = [];
+
+function navigateTo(viewName) {
+  state.currentView = viewName;
+  
+  // Hide all views
+  document.querySelectorAll('.page-view').forEach(el => el.classList.add('hidden'));
+  
+  // Show target
+  const target = document.getElementById(`page-${viewName}`);
+  if (target) {
+    target.classList.remove('hidden');
+    // slight delay for opacity transition to trigger
+    requestAnimationFrame(() => {
+      target.style.opacity = '1';
+    });
+  }
+
+  // Update nav active states
+  document.querySelectorAll('.sidebar-nav .nav-item').forEach(el => {
+    if (el.dataset.view === viewName) {
+      el.classList.add('active');
+    } else {
+      el.classList.remove('active');
+    }
+  });
+
+  renderCurrentView();
+}
+
+function renderCurrentView() {
+  switch (state.currentView) {
+    case 'home': renderHome(); break;
+    case 'library': renderLibrary(); break;
+    case 'recent': renderRecentReads(); break;
+    case 'favorites': renderFavorites(); break;
+    case 'collections': renderCollections(); break;
   }
 }
+
+function renderHome() {
+  const recentGrid = document.getElementById('home-recent-grid');
+  const favRow = document.getElementById('home-favorites-row');
+  const recentAddedRow = document.getElementById('home-recent-added-row');
+
+  if (recentGrid) {
+    const recent = [...state.files].filter(f => f.lastOpened > 0).sort((a,b) => b.lastOpened - a.lastOpened).slice(0, 5);
+    recentGrid.innerHTML = '';
+    if (recent.length === 0) recentGrid.innerHTML = '<div class="text-muted" style="font-size:13px;">No recently read books.</div>';
+    recent.forEach(f => recentGrid.appendChild(createBookCardElement(f, 'recent')));
+  }
+
+  if (favRow) {
+    const favs = [...state.files].filter(f => f.favorite).slice(0, 10);
+    favRow.innerHTML = '';
+    if (favs.length === 0) favRow.innerHTML = '<div class="text-muted" style="font-size:13px;">No favorite books yet.</div>';
+    favs.forEach(f => favRow.appendChild(createBookCardElement(f, 'favorite')));
+  }
+
+  if (recentAddedRow) {
+    const added = [...state.files].sort((a,b) => (b.dateAdded || 0) - (a.dateAdded || 0)).slice(0, 10);
+    recentAddedRow.innerHTML = '';
+    if (added.length === 0) recentAddedRow.innerHTML = '<div class="text-muted" style="font-size:13px;">No books imported. Library is empty.</div>';
+    added.forEach(f => recentAddedRow.appendChild(createBookCardElement(f, 'home')));
+  }
+}
+
+function renderLibrary() {
+  const grid = document.getElementById('library-grid');
+  if (!grid) return;
+  
+  // Reuse existing filtered list logic (which checks state.filter, state.search)
+  const files = getFilteredFiles(); 
+  
+  grid.innerHTML = '';
+  if (files.length === 0) {
+    grid.innerHTML = '<div class="text-muted" style="font-size:14px; grid-column: 1 / -1;">No matching books found in library.</div>';
+    return;
+  }
+
+  const frag = document.createDocumentFragment();
+  files.forEach(f => {
+    frag.appendChild(createBookCardElement(f, 'library'));
+  });
+  grid.appendChild(frag);
+}
+
+function renderRecentReads() {
+  const grid = document.getElementById('recent-grid');
+  if (!grid) return;
+  const recent = [...state.files].filter(f => f.lastOpened > 0).sort((a,b) => b.lastOpened - a.lastOpened);
+  grid.innerHTML = '';
+  if (recent.length === 0) grid.innerHTML = '<div class="text-muted" style="font-size:14px; grid-column: 1 / -1;">No recently read books.</div>';
+  recent.forEach(f => grid.appendChild(createBookCardElement(f, 'recent')));
+}
+
+function renderFavorites() {
+  const grid = document.getElementById('favorites-grid');
+  if (!grid) return;
+  const favs = [...state.files].filter(f => f.favorite);
+  grid.innerHTML = '';
+  if (favs.length === 0) grid.innerHTML = '<div class="text-muted" style="font-size:14px; grid-column: 1 / -1;">No favorite books found. Click the heart icon on a book to add one.</div>';
+  favs.forEach(f => grid.appendChild(createBookCardElement(f, 'favorite')));
+}
+
+function renderCollections() {
+  const grid = document.getElementById('collections-grid');
+  if (grid && !grid.hasChildNodes()) {
+    grid.innerHTML = '<div class="text-muted" style="font-size:14px;">Collections feature coming soon!</div>';
+  }
+}
+
+function createBookCardElement(file, mode) {
+  const template = document.getElementById('template-book-card');
+  if (!template) return document.createElement('div');
+  const clone = template.content.cloneNode(true);
+  const card = clone.querySelector('.book-card');
+  
+  card.dataset.id = file.id;
+
+  // Set info
+  card.querySelector('.book-title').textContent = truncate(file.name.replace(/\.[^/.]+$/, ""), 40);
+  card.querySelector('.book-author').textContent = file.author || 'Unknown Author';
+  
+  // Format badge
+  card.querySelector('.badge-format').textContent = file.type.toUpperCase();
+  
+  // Fav status
+  const favBtn = card.querySelector('.overlay-btn-fav');
+  if (file.favorite) {
+    card.classList.add('is-favorite');
+    favBtn?.classList.add('active');
+  }
+
+  // Cover
+  const img = card.querySelector('.book-cover');
+  const placeholder = card.querySelector('.book-cover-placeholder');
+  if (file.coverUrl) {
+    img.src = file.coverUrl;
+    placeholder.style.display = 'none';
+  } else {
+    img.style.display = 'none';
+    placeholder.textContent = file.type.toUpperCase();
+  }
+
+  // Progress
+  const pct = file.progress || 0;
+  if (pct > 0) {
+    card.querySelector('.progress-bar-fill').style.width = `${pct}%`;
+  } else {
+    card.querySelector('.progress-bar-small').style.display = 'none';
+  }
+
+  // Events
+  card.querySelector('.overlay-btn-read')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openReader(file);
+  });
+  
+  favBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    file.favorite = !file.favorite;
+    renderCurrentView();
+  });
+  
+  card.querySelector('.overlay-btn-remove')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    state.files = state.files.filter(f => f.id !== file.id);
+    renderCurrentView();
+    updateStats();
+  });
+  
+  // Clicking the card itself
+  card.addEventListener('click', () => {
+    openReader(file);
+  });
+
+  return card;
+}
+
+// ─── HOOKS INTO EXISTING LOGIC ────────────────────────────────────────────────
+
+// Intercept window close or reader close to update lastOpened
+const originalCloseReader = closeReader;
+closeReader = function() {
+  if (state.reader.active && state.reader.file) {
+    state.reader.file.lastOpened = Date.now();
+    // dummy progress update since we don't have true pagination calculation hooked up everywhere yet
+    if (!state.reader.file.progress) state.reader.file.progress = 5; 
+    state.reader.file.progress = Math.min(100, state.reader.file.progress + 15);
+  }
+  originalCloseReader();
+  renderCurrentView();
+};
+
+// Hook into addFiles to update the current view and add metadata
+const originalAddFiles = addFiles;
+addFiles = function(newFiles) {
+  // inject metadata
+  newFiles.forEach(f => {
+    f.dateAdded = f.dateAdded || Date.now();
+    f.lastOpened = f.lastOpened || 0;
+    f.progress = f.progress || 0;
+    f.favorite = f.favorite || false;
+    f.author = f.author || 'Unknown Author';
+  });
+  originalAddFiles(newFiles);
+  renderCurrentView();
+};
+
+// Ensure updates happen when table normally renders
+const originalRenderTable = renderTable;
+renderTable = function() {
+  originalRenderTable();
+  if (state.currentView === 'library') renderLibrary();
+};
+
+const originalUpdateRowCover = updateRowCover;
+updateRowCover = function(id) {
+  originalUpdateRowCover(id);
+  renderCurrentView();
+};
+
+// Bind new nav listeners
+document.querySelectorAll('.sidebar-nav .nav-item').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    const view = e.currentTarget.dataset.view;
+    if (view) navigateTo(view);
+  });
+});
+
+document.querySelectorAll('[data-goto]').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    const view = e.currentTarget.dataset.goto;
+    if (view) navigateTo(view);
+  });
+});
+
+// Bind Library search/sort
+document.getElementById('library-search')?.addEventListener('input', (e) => {
+  state.search = e.target.value.toLowerCase();
+  if (state.currentView === 'library') renderLibrary();
+});
+
+document.getElementById('library-sort')?.addEventListener('change', (e) => {
+  state.sort.col = e.target.value;
+  if (state.currentView === 'library') renderLibrary();
+});
+
+document.querySelectorAll('.library-toolbar .filter-tab').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    document.querySelectorAll('.library-toolbar .filter-tab').forEach(b => b.classList.remove('active'));
+    e.currentTarget.classList.add('active');
+    state.filter = e.currentTarget.dataset.filter;
+    if (state.currentView === 'library') renderLibrary();
+  });
+});
+
+// Open file dialog from library "Add Books" button
+document.getElementById('btn-add-books')?.addEventListener('click', () => {
+  document.getElementById('file-input')?.click();
+});
+
+// Initialize with home
+setTimeout(() => {
+  navigateTo('home');
+}, 500);
