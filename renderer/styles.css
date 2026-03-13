@@ -696,6 +696,9 @@ body {
   text-align: center;
   animation: fade-in 0.3s ease;
   flex: 1;
+  position: relative;
+  z-index: 10;
+  pointer-events: auto;
 }
 
 .home-empty-state.hidden {

@@ -69,6 +69,21 @@ ipcMain.handle('dialog:openFolder', async () => {
 });
 
 /**
+ * Open file selection dialog
+ */
+ipcMain.handle('dialog:openFiles', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openFile', 'multiSelections'],
+    filters: [
+      { name: 'Ebooks', extensions: ['pdf', 'epub', 'mobi'] }
+    ],
+    title: 'Select Ebooks to Import',
+  });
+  if (result.canceled) return null;
+  return result.filePaths;
+});
+
+/**
  * Open save folder selection dialog
  */
 ipcMain.handle('dialog:saveFolder', async () => {

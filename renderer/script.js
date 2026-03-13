@@ -114,8 +114,10 @@ const els = {
     }
   });
 
-  bindEvents();
-  restoreTheme();
+  document.addEventListener('DOMContentLoaded', () => {
+    bindEvents();
+    restoreTheme();
+  });
 })();
 
 // ─── Event Binding ────────────────────────────────────────────────────────────
@@ -196,11 +198,27 @@ function bindEvents() {
     if (e.key === 'ArrowRight') onReaderNext();
   });
 
-  // Home Empty State events
-  document.addEventListener('click', (e) => {
+  // Home Empty State events (Event Delegation)
+  document.addEventListener('click', async (e) => {
+    // Add Files button
     if (e.target.closest('#btn-home-add-files')) {
-      if (els.fileInput) els.fileInput.click();
+      if (window.electronAPI && window.electronAPI.openFiles) {
+        const filePaths = await window.electronAPI.openFiles();
+        if (filePaths && filePaths.length > 0) {
+          addFiles(Array.from(filePaths).map(p => ({
+            name: p.split(/[\\/]/).pop(),
+            path: p,
+            type: p.toLowerCase().endsWith('.epub') ? 'application/epub+zip' : 'application/pdf',
+            size: 0 // Size might not be strictly needed initially, or can be fetched
+          })));
+        }
+      } else {
+        // Fallback
+        const fileInput = document.getElementById('file-input');
+        if (fileInput) fileInput.click();
+      }
     }
+    // Add Folder button
     if (e.target.closest('#btn-home-add-folder')) {
       onSelectFolder();
     }
