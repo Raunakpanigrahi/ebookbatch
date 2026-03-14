@@ -280,47 +280,64 @@
   <!-- ═══════════════════════════════════════════════════════════════════════════
      READER OVERLAY
 ════════════════════════════════════════════════════════════════════════════ -->
-  <div class="reader-overlay hidden" id="reader-overlay">
+  <div class="reader-overlay hidden" id="reader-overlay" data-reader-theme="light">
+    
+    <!-- TOP TOOLBAR -->
     <div class="reader-toolbar">
-      <button class="reader-btn" id="btn-reader-back" title="Back (Esc)">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="19" y1="12" x2="5" y2="12"></line>
-          <polyline points="12 19 5 12 12 5"></polyline>
-        </svg>
-      </button>
-      <div class="reader-title" id="reader-title">Book Title</div>
-      <div class="reader-controls">
-        <span class="reader-page-info" id="reader-page-info"></span>
-        <div class="pdf-controls hidden" id="pdf-controls">
-          <button class="reader-btn" id="btn-zoom-out" title="Zoom Out">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-          </button>
-          <span class="pdf-zoom-level" id="pdf-zoom-level">100%</span>
-          <button class="reader-btn" id="btn-zoom-in" title="Zoom In">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-          </button>
-        </div>
-        <button class="reader-btn" id="btn-reader-settings" title="Settings">
+      <div class="reader-toolbar-left">
+        <button class="reader-btn" id="btn-reader-back" title="Back to Library (Esc)">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line>
-            <line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line>
-            <line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line>
-            <line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line>
-            <line x1="17" y1="16" x2="23" y2="16"></line>
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
           </svg>
+        </button>
+        <div class="reader-title" id="reader-title">Book Title</div>
+      </div>
+      
+      <div class="reader-toolbar-right">
+        <button class="reader-btn" id="btn-reader-search" title="Search">
+           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        </button>
+        <button class="reader-btn" id="btn-reader-bookmark" title="Bookmarks">
+           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+        </button>
+        <button class="reader-btn" id="btn-reader-settings" title="Display Settings">
+          <span style="font-weight:700; font-family: serif; font-size: 16px;">Tt</span>
+        </button>
+        <button class="reader-btn" id="btn-reader-theme-toggle" title="Toggle Theme (Light/Sepia/Dark)">
+           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        </button>
+        <button class="reader-btn" id="btn-reader-fullscreen" title="Fullscreen">
+           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
         </button>
       </div>
     </div>
 
-    <!-- Reader Settings Panel -->
+    <!-- Reader Settings Panel (Relative to Top-Right) -->
     <div class="reader-settings-panel hidden" id="reader-settings-panel">
       <div class="settings-group">
         <label>Theme</label>
         <div class="theme-options">
-          <button class="theme-option" data-theme="light" style="background:#fff;color:#000;">A</button>
-          <button class="theme-option" data-theme="sepia" style="background:#f4ecd8;color:#5b4636;">A</button>
-          <button class="theme-option" data-theme="dark" style="background:#1a1a1a;color:#ccc;">A</button>
+          <button class="theme-option" data-theme="light" style="background:#ffffff; color:#1a1a1a; border-color:#e0e0e0;">Light</button>
+          <button class="theme-option" data-theme="sepia" style="background:#f4ecd8; color:#5b4636; border-color:#e0d6c1;">Sepia</button>
+          <button class="theme-option" data-theme="dark" style="background:#1a1a1a; color:#e2e2ea; border-color:#333;">Dark</button>
         </div>
+      </div>
+      <div class="settings-group">
+        <label>Font Family</label>
+        <select id="reader-font-family" class="dropdown-filter" style="width:100%; margin-bottom: 8px;">
+          <option value="Georgia">Georgia</option>
+          <option value="Merriweather">Merriweather</option>
+          <option value="'Libre Baskerville'">Libre Baskerville</option>
+          <option value="'Times New Roman'">Times New Roman</option>
+          <option value="Inter">Inter</option>
+        </select>
+        <label style="margin-top: 8px;">Line Spacing</label>
+        <select id="reader-line-spacing" class="dropdown-filter" style="width:100%;">
+          <option value="1.4">1.4</option>
+          <option value="1.6" selected>1.6</option>
+          <option value="1.8">1.8</option>
+        </select>
       </div>
       <div class="settings-group">
         <label>Font Size</label>
@@ -332,20 +349,29 @@
       </div>
     </div>
 
-    <div class="reader-main">
-      <button class="nav-btn nav-btn--left" id="btn-reader-prev" title="Previous Page (Left Arrow)">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="15 18 9 12 15 6"></polyline>
-        </svg>
-      </button>
-      <div class="reader-content-wrapper">
-        <div id="reader-content"></div>
-      </div>
-      <button class="nav-btn nav-btn--right" id="btn-reader-next" title="Next Page (Right Arrow)">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="9 18 15 12 9 6"></polyline>
-        </svg>
-      </button>
+    <!-- MAIN VIEWPORT -->
+    <div class="reader-viewport">
+       <div class="nav-overlay nav-left" id="reader-nav-left" title="Previous Page"></div>
+       
+       <!-- Content Column Wrapper -->
+       <div class="reader-content-wrapper" id="reader-content-wrapper">
+         <div id="reader-content"></div>
+       </div>
+       
+       <div class="nav-overlay nav-right" id="reader-nav-right" title="Next Page"></div>
+    </div>
+
+    <!-- FOOTER STATUS BAR -->
+    <div class="reader-footer-status">
+       <div class="status-left"><span id="reader-chapter-title">Starting reading...</span></div>
+       <div class="status-center">
+         <span id="reader-page-info"></span>
+         <!-- Hidden PDF Specific Controls mapped for compatibility -->
+         <span class="hidden" id="pdf-controls">
+            <span id="btn-zoom-out"></span><span id="pdf-zoom-level"></span><span id="btn-zoom-in"></span>
+         </span>
+       </div>
+       <div class="status-right"><span id="reader-progress-pct">0%</span></div>
     </div>
   </div>
 

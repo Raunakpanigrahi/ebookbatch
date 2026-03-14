@@ -38,5 +38,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // ── Window Controls ─────────────────────────────────────────────────
   minimizeWindow: () => ipcRenderer.invoke('window:minimize'),
   maximizeWindow: () => ipcRenderer.invoke('window:maximize'),
+  toggleFullscreen: () => ipcRenderer.invoke('window:toggleFullscreen'),
   closeWindow: () => ipcRenderer.invoke('window:close'),
 });

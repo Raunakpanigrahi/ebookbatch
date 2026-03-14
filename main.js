@@ -248,6 +248,15 @@ ipcMain.handle('app:getVersion', () => app.getVersion());
 ipcMain.handle('window:minimize', () => mainWindow?.minimize());
 
 /**
+ * Toggle Fullscreen
+ */
+ipcMain.handle('window:toggleFullscreen', () => {
+  if (mainWindow) {
+    mainWindow.setFullScreen(!mainWindow.isFullScreen());
+  }
+});
+
+/**
  * Maximize/restore window
  */
 ipcMain.handle('window:maximize', () => {

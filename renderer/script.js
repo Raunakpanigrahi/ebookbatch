@@ -30,6 +30,8 @@ const state = {
     zoom: 1.0,
     theme: 'light',
     fontSize: 100,
+    fontFamily: 'Georgia',
+    lineSpacing: '1.6',
   },
 };
 
@@ -117,6 +119,7 @@ const els = {
   const initializeUI = () => {
     bindEvents();
     restoreTheme();
+    restoreReaderSettings();
   };
 
   if (document.readyState === 'loading') {
@@ -178,13 +181,37 @@ function bindEvents() {
 
   // Reader controls
   if (els.btnReaderBack) els.btnReaderBack.addEventListener('click', closeReader);
-  if (els.btnReaderPrev) els.btnReaderPrev.addEventListener('click', onReaderPrev);
-  if (els.btnReaderNext) els.btnReaderNext.addEventListener('click', onReaderNext);
+  if ($('reader-nav-left')) $('reader-nav-left').addEventListener('click', onReaderPrev);
+  if ($('reader-nav-right')) $('reader-nav-right').addEventListener('click', onReaderNext);
   if (els.btnZoomIn) els.btnZoomIn.addEventListener('click', onZoomIn);
   if (els.btnZoomOut) els.btnZoomOut.addEventListener('click', onZoomOut);
-  if (els.btnReaderSettings) {
-    els.btnReaderSettings.addEventListener('click', () => {
+  
+  if ($('btn-reader-settings')) {
+    $('btn-reader-settings').addEventListener('click', () => {
       els.readerSettingsPanel.classList.toggle('hidden');
+    });
+  }
+  
+  // Fullscreen
+  if ($('btn-reader-fullscreen')) {
+    $('btn-reader-fullscreen').addEventListener('click', onToggleFullscreen);
+  }
+
+  // Reader Settings (Font, Line Spacing)
+  if ($('reader-font-family')) {
+    $('reader-font-family').addEventListener('change', onReaderFormatChange);
+  }
+  if ($('reader-line-spacing')) {
+    $('reader-line-spacing').addEventListener('change', onReaderFormatChange);
+  }
+
+  // Theme Toggle (Cycle through Light -> Sepia -> Dark)
+  if ($('btn-reader-theme-toggle')) {
+    $('btn-reader-theme-toggle').addEventListener('click', () => {
+      const themes = ['light', 'sepia', 'dark'];
+      const current = state.reader.theme;
+      const nextIndex = (themes.indexOf(current) + 1) % themes.length;
+      onReaderThemeChange(themes[nextIndex]);
     });
   }
   
@@ -199,7 +226,14 @@ function bindEvents() {
 
   document.addEventListener('keydown', (e) => {
     if (!state.reader.active) return;
-    if (e.key === 'Escape') closeReader();
+    if (e.key === 'Escape') {
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      } else {
+        closeReader(); // Assume exit reader if we press escape not-in-fullscreen
+        // window.electronAPI.toggleFullscreen(); // Removed fullscreen toggle on escape to prevent annoyance
+      }
+    }
     if (e.key === 'ArrowLeft') onReaderPrev();
     if (e.key === 'ArrowRight') onReaderNext();
   });
@@ -1124,6 +1158,7 @@ async function openReader(file) {
       els.pdfControls.classList.remove('hidden');
       initPdfReader(bytes);
     }
+    applyReaderFormatting();
   } catch (err) {
     console.error('Error in openReader:', err, err.stack);
     showToast('Failed to open reader: ' + err.message, 'error');
@@ -1158,7 +1193,7 @@ function initEpubReader(arrayBuffer) {
   const rendition = book.renderTo("reader-content", {
     width: "100%",
     height: "100%",
-    spread: "none",
+    spread: "auto",
     manager: "continuous",
     flow: "paginated"
   });
@@ -1179,12 +1214,13 @@ function initEpubReader(arrayBuffer) {
   });
 
   book.ready.then(() => {
+    // Generate epub.js accurate pagination map
     book.locations.generate(1600).then(() => {
        const curLoc = rendition.currentLocation();
        if (curLoc && curLoc.start) {
          const pct = Math.round(book.locations.percentageFromCfi(curLoc.start.cfi) * 100);
          if (state.reader.file) state.reader.file.progress = pct;
-         els.readerPageInfo.textContent = `EPUB Document (${pct}%)`;
+         $('reader-progress-pct').textContent = `${pct}%`;
        }
     }).catch(e => console.error("EPUB locations generation failed", e));
   });
@@ -1203,15 +1239,21 @@ function initEpubReader(arrayBuffer) {
 
 function onReaderThemeChange(themeName) {
   state.reader.theme = themeName;
+  $('reader-overlay').setAttribute('data-reader-theme', themeName);
+  
   if (state.reader.type === 'epub' && state.reader.rendition) {
     state.reader.rendition.themes.select(themeName);
   }
   
   // also adjust pdf background if dark mode
-  if (state.reader.type === 'pdf' && themeName === 'dark') {
-    els.readerContent.style.filter = 'invert(0.9) hue-rotate(180deg)';
-  } else if (state.reader.type === 'pdf') {
-    els.readerContent.style.filter = 'none';
+  if (state.reader.type === 'pdf') {
+    if (themeName === 'dark') {
+      els.readerContent.style.filter = 'invert(0.9) hue-rotate(180deg)';
+    } else if (themeName === 'sepia') {
+      els.readerContent.style.filter = 'sepia(0.5) contrast(0.9)';
+    } else {
+      els.readerContent.style.filter = 'none';
+    }
   }
 }
 
@@ -1222,6 +1264,51 @@ function onReaderFontChange(delta) {
   if (state.reader.type === 'epub' && state.reader.rendition) {
     state.reader.rendition.themes.fontSize(`${state.reader.fontSize}%`);
   }
+}
+
+function onReaderFormatChange() {
+  const familyEl = $('reader-font-family');
+  const lineEl = $('reader-line-spacing');
+  if (familyEl) state.reader.fontFamily = familyEl.value;
+  if (lineEl) state.reader.lineSpacing = lineEl.value;
+  
+  localStorage.setItem('readerSettings', JSON.stringify({
+    fontFamily: state.reader.fontFamily,
+    lineSpacing: state.reader.lineSpacing
+  }));
+  
+  applyReaderFormatting();
+}
+
+function applyReaderFormatting() {
+  const container = document.querySelector('.reader-content-wrapper');
+  if (container) {
+    container.style.fontFamily = state.reader.fontFamily;
+    container.style.lineHeight = state.reader.lineSpacing;
+  }
+  
+  if (state.reader.type === 'epub' && state.reader.rendition) {
+    state.reader.rendition.themes.font(state.reader.fontFamily);
+  }
+}
+
+function restoreReaderSettings() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('readerSettings'));
+    if (saved) {
+      if (saved.fontFamily) state.reader.fontFamily = saved.fontFamily;
+      if (saved.lineSpacing) state.reader.lineSpacing = saved.lineSpacing;
+      
+      const familyEl = $('reader-font-family');
+      const lineEl = $('reader-line-spacing');
+      if (familyEl) familyEl.value = state.reader.fontFamily;
+      if (lineEl) lineEl.value = state.reader.lineSpacing;
+    }
+  } catch(e) {}
+}
+
+function onToggleFullscreen() {
+  window.electronAPI.toggleFullscreen();
 }
 
 // -- PDF --
@@ -1248,29 +1335,48 @@ async function initPdfReader(bytes) {
 
 async function renderPdfPage(num) {
   if (!state.reader.pdfDoc) return;
-  els.readerPageInfo.textContent = `Page ${num} of ${state.reader.pageCount}`;
+  els.readerContent.innerHTML = ''; // clear previous
+  
+  // Determine if we need to show two pages or one
+  // Simple heuristic: if window width > 800, render two side-by-side
+  const isLandscape = window.innerWidth > 800;
+  
+  els.readerPageInfo.textContent = isLandscape ? `Page ${num}-${Math.min(num + 1, state.reader.pageCount)} of ${state.reader.pageCount}` : `Page ${num} of ${state.reader.pageCount}`;
+  
   if (state.reader.file) {
-    state.reader.file.progress = Math.round((num / state.reader.pageCount) * 100);
+    const progressPct = Math.round((num / state.reader.pageCount) * 100);
+    state.reader.file.progress = progressPct;
+    $('reader-progress-pct').textContent = `${progressPct}%`;
   }
   
   try {
-    const page = await state.reader.pdfDoc.getPage(num);
-    const viewport = page.getViewport({ scale: state.reader.zoom * 1.5 }); // Base scale
+    // Helper to render a single canvas page
+    const renderSinglePage = async (pageContextNum) => {
+      const page = await state.reader.pdfDoc.getPage(pageContextNum);
+      const viewport = page.getViewport({ scale: state.reader.zoom * 1.5 });
+      
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      canvas.style.maxWidth = "100%";
+      canvas.style.height = "auto";
+      canvas.style.objectFit = "contain";
+      
+      await page.render({ canvasContext: ctx, viewport }).promise;
+      return canvas;
+    };
+
+    // Render Left Page
+    const canvasLeft = await renderSinglePage(num);
+    els.readerContent.appendChild(canvasLeft);
     
-    els.readerContent.innerHTML = ''; // clear previous
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
+    // Render Right Page (If Landscape & Exists)
+    if (isLandscape && num + 1 <= state.reader.pageCount) {
+      const canvasRight = await renderSinglePage(num + 1);
+      els.readerContent.appendChild(canvasRight);
+    }
     
-    // Fit canvas nicely in CSS
-    canvas.style.maxWidth = "100%";
-    canvas.style.height = "auto";
-    canvas.style.objectFit = "contain";
-    
-    els.readerContent.appendChild(canvas);
-    
-    await page.render({ canvasContext: ctx, viewport }).promise;
   } catch (err) {
     console.error(err);
   }
@@ -1299,7 +1405,9 @@ function onReaderPrev() {
     state.reader.rendition?.prev();
   } else if (state.reader.type === 'pdf') {
     if (state.reader.pageNum <= 1) return;
-    state.reader.pageNum--;
+    const isLandscape = window.innerWidth > 800;
+    const shift = isLandscape ? 2 : 1;
+    state.reader.pageNum = Math.max(1, state.reader.pageNum - shift);
     renderPdfPage(state.reader.pageNum);
   }
 }
@@ -1308,11 +1416,26 @@ function onReaderNext() {
   if (state.reader.type === 'epub') {
     state.reader.rendition?.next();
   } else if (state.reader.type === 'pdf') {
+    const isLandscape = window.innerWidth > 800;
+    const shift = isLandscape ? 2 : 1;
     if (state.reader.pageNum >= state.reader.pageCount) return;
-    state.reader.pageNum++;
+    
+    state.reader.pageNum = Math.min(state.reader.pageCount, state.reader.pageNum + shift);
     renderPdfPage(state.reader.pageNum);
   }
 }
+
+// Re-evaluate PDF layout on resize without full app re-renders
+let resizeTimer;
+window.addEventListener('resize', () => {
+  if (state.reader.active && state.reader.type === 'pdf') {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      // Re-trigger render to swap double/single view dynamically
+      renderPdfPage(state.reader.pageNum);
+    }, 200);
+  }
+});
 
 /* ══════════════════════════════════════════════════════════════
    PHASE 2 & 3: NEW LAYOUT, NAVIGATION & RENDERING LOGIC

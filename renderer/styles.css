@@ -1541,119 +1541,129 @@ body,
 
 /* ══════════════════════════════════════════════════════════════
    READER OVERLAY
+/* ══════════════════════════════════════════════════════════════
+   READER OVERLAY (3 MODES)
 ══════════════════════════════════════════════════════════════ */
+
 .reader-overlay {
   position: fixed;
   inset: var(--titlebar-h) 0 0 0;
-  background: rgba(8, 8, 15, 0.95);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
   z-index: 2000;
   display: flex;
   flex-direction: column;
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  transition: opacity 0.3s ease, transform 0.3s ease, background-color 0.3s ease, color 0.3s ease;
+  font-family: Georgia, "Merriweather", "Libre Baskerville", serif;
+  line-height: 1.7;
+}
+
+/* Reader Themes using CSS Variables */
+.reader-overlay[data-reader-theme="light"] {
+  --reader-bg: #fdfdfd;
+  --reader-text: #222222;
+  --reader-ui-bg: rgba(253, 253, 253, 0.95);
+  --reader-ui-border: #eaeaea;
+}
+
+.reader-overlay[data-reader-theme="sepia"] {
+  --reader-bg: #f4ecd8;
+  --reader-text: #5b4636;
+  --reader-ui-bg: rgba(244, 236, 216, 0.95);
+  --reader-ui-border: #e0d6c1;
+}
+
+.reader-overlay[data-reader-theme="dark"] {
+  --reader-bg: #121212;
+  --reader-text: #e2e2ea;
+  --reader-ui-bg: rgba(18, 18, 18, 0.95);
+  --reader-ui-border: #2a2a2a;
+}
+
+.reader-overlay {
+  background-color: var(--reader-bg);
+  color: var(--reader-text);
 }
 
 .reader-overlay.hidden {
   opacity: 0;
   pointer-events: none;
-  transform: translateY(20px);
-  display: flex !important; /* Override .hidden to allow transitions */
+  transform: translateY(15px);
+  display: flex !important;
 }
 
+/* Top Toolbar */
 .reader-toolbar {
-  height: 56px;
+  height: 52px;
   display: flex;
   align-items: center;
-  padding: 0 20px;
-  background: rgba(22, 21, 31, 0.6);
-  border-bottom: 1px solid var(--border-light);
-  gap: 16px;
+  justify-content: space-between;
+  padding: 0 24px;
+  background: var(--reader-ui-bg);
+  border-bottom: 1px solid var(--reader-ui-border);
+  backdrop-filter: blur(10px);
   flex-shrink: 0;
+  z-index: 10;
+  font-family: 'DM Sans', sans-serif;
+  transition: transform 0.3s ease;
+}
+
+.reader-toolbar-left, .reader-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
 .reader-btn {
   width: 36px;
   height: 36px;
-  border-radius: var(--radius-sm);
+  border-radius: 4px;
   background: transparent;
-  border: 1px solid transparent;
-  color: var(--text-muted);
+  border: none;
+  color: var(--reader-text);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s;
+  opacity: 0.6;
+  transition: opacity 0.2s, background-color 0.2s;
 }
 
 .reader-btn:hover {
-  background: var(--bg-hover);
-  color: var(--text);
-  border-color: var(--border-soft);
+  opacity: 1;
+  background-color: rgba(180, 180, 180, 0.15);
 }
 
 .reader-title {
-  flex: 1;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
-  color: var(--text);
+  opacity: 0.8;
+  max-width: 300px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  text-align: center;
 }
 
-.reader-controls {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.reader-page-info {
-  font-size: 13px;
-  color: var(--text-muted);
-  font-family: 'DM Mono', monospace;
-}
-
-.pdf-controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--bg-elevated);
-  padding: 4px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-soft);
-}
-
-.pdf-zoom-level {
-  font-size: 12px;
-  min-width: 44px;
-  text-align: center;
-  color: var(--text);
-  font-family: 'DM Mono', monospace;
-}
-
+/* Settings Dropdown */
 .reader-settings-panel {
   position: absolute;
-  top: 64px;
-  right: 20px;
-  width: 260px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-sm);
+  top: 60px;
+  right: 24px;
+  width: 250px;
+  background: var(--reader-bg);
+  border: 1px solid var(--reader-ui-border);
+  border-radius: 8px;
   padding: 16px;
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
   display: flex;
   flex-direction: column;
   gap: 16px;
   z-index: 2010;
-  backdrop-filter: blur(30px);
+  font-family: 'DM Sans', sans-serif;
   transition: opacity 0.2s, transform 0.2s;
 }
 
 .reader-settings-panel.hidden {
   opacity: 0;
-  transform: translateY(-10px);
+  transform: translateY(-8px);
   pointer-events: none;
   display: flex !important;
 }
@@ -1664,7 +1674,7 @@ body,
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-muted);
+  opacity: 0.5;
   margin-bottom: 8px;
 }
 
@@ -1676,10 +1686,11 @@ body,
 .theme-option {
   flex: 1;
   height: 36px;
-  border-radius: 6px;
-  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  border: 1px solid;
   cursor: pointer;
   font-weight: 600;
+  font-size: 12px;
   transition: transform 0.1s;
 }
 
@@ -1691,8 +1702,7 @@ body,
   display: flex;
   align-items: center;
   gap: 12px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-soft);
+  border: 1px solid var(--reader-ui-border);
   border-radius: 6px;
   padding: 4px;
 }
@@ -1702,98 +1712,94 @@ body,
   height: 32px;
   background: transparent;
   border: none;
-  color: var(--text);
+  color: var(--reader-text);
   font-weight: 600;
   cursor: pointer;
   border-radius: 4px;
 }
-
 .font-btn:hover {
-  background: var(--bg-hover);
+  background-color: rgba(180, 180, 180, 0.1);
 }
 
 #font-size-display {
-  font-family: 'DM Mono', monospace;
   font-size: 13px;
   width: 48px;
   text-align: center;
 }
 
-.reader-main {
+/* Main Viewport & Invisible Navigation Hitzones */
+.reader-viewport {
   flex: 1;
-  display: flex;
   position: relative;
-  overflow: hidden;
-  background: transparent;
-}
-
-.reader-content-wrapper {
-  flex: 1;
   display: flex;
   justify-content: center;
+  overflow: hidden;
+}
+
+.nav-overlay {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 25%;
+  z-index: 100;
+  cursor: pointer;
+}
+.nav-overlay.nav-left { left: 0; }
+.nav-overlay.nav-right { right: 0; }
+
+.reader-content-wrapper {
+  width: 100%;
+  max-width: 1200px;
+  height: 100%;
+  display: flex;
   align-items: center;
-  overflow: auto;
+  justify-content: center;
   position: relative;
+  z-index: 50; /* Below overlays so overlays catch clicks */
 }
 
 #reader-content {
   width: 100%;
-  height: 100%;
+  height: calc(100% - 40px);
+  margin: 20px 0;
   display: flex;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
+  gap: 40px; /* Gap between dual-canvas PDFs */
 }
 
-/* For EPUB.js iframe container */
+/* Clean Canvas Overrides */
 #reader-content iframe {
   border: none;
 }
 
-/* For PDF.js canvas */
 #reader-content canvas {
-  box-shadow: var(--shadow-md);
-  margin: 20px auto;
-  background: white;
-  transition: transform 0.1s;
+  box-shadow: none;
+  background: transparent;
+  max-height: 100%;
+  object-fit: contain;
 }
 
-.nav-btn {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: rgba(22, 21, 31, 0.4);
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--border-light);
-  color: var(--text);
+/* Footer Status Bar */
+.reader-footer-status {
+  height: 32px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  cursor: pointer;
+  justify-content: space-between;
+  padding: 0 40px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  opacity: 0.6;
+  flex-shrink: 0;
   z-index: 10;
-  transition: all 0.2s;
-  opacity: 0.3;
 }
 
-.reader-main:hover .nav-btn {
-  opacity: 1;
-}
-
-.nav-btn:hover {
-  background: rgba(110, 86, 233, 0.4);
-  border-color: var(--accent);
-  color: #fff;
-  transform: translateY(-50%) scale(1.1);
-}
-
-.nav-btn--left {
-  left: 20px;
-}
-
-.nav-btn--right {
-  right: 20px;
+.reader-footer-status .status-center {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 /* ══════════════════════════════════════════════════════════════
