@@ -1733,7 +1733,23 @@ body,
   position: relative;
   display: flex;
   justify-content: center;
+  align-items: stretch;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
+}
+
+.reader-stage {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  padding-left: clamp(24px, 5vw, 120px);
+  padding-right: clamp(24px, 5vw, 120px);
+  width: 100%;
+  height: 100%;
+  position: relative;
+  z-index: 50; /* Catch clicks */
 }
 
 .nav-overlay {
@@ -1748,41 +1764,58 @@ body,
 .nav-overlay.nav-right { right: 0; }
 
 .reader-content-wrapper {
-  width: 100%;
-  max-width: 1200px;
-  height: 100%;
+  margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
-  z-index: 50; /* Below overlays so overlays catch clicks */
-  transition: max-width 0.3s ease, padding 0.3s ease;
+  transition: max-width 0.25s ease;
+  width: 100%;
+  height: 100%;
 }
 
-.reader-overlay.is-fullscreen .reader-content-wrapper {
-  width: 100vw;
+.reader-content-wrapper[data-width-mode="narrow"] {
+  max-width: 680px;
+}
+.reader-content-wrapper[data-width-mode="medium"] {
+  max-width: 900px;
+}
+.reader-content-wrapper[data-width-mode="wide"] {
+  max-width: 1200px;
+}
+.reader-content-wrapper[data-width-mode="full"] {
   max-width: none;
+}
+
+.reader-overlay.is-fullscreen .reader-stage {
   padding: 0 max(80px, 6vw);
 }
 
-.reader-overlay.is-fullscreen #reader-content {
+.reader-overlay.is-fullscreen .reader-pages {
   width: 100%;
-  max-width: none;
   gap: 80px;
 }
 
-#reader-content {
+.reader-pages {
   width: 100%;
   height: calc(100% - 40px);
-  margin: 20px 0;
+  margin: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 40px; /* Gap between dual-canvas PDFs */
 }
 
+@keyframes pageFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.reader-pages canvas {
+  animation: pageFadeIn 0.3s ease forwards;
+}
+
 /* Clean Canvas Overrides */
-#reader-content iframe {
+.reader-pages iframe {
   border: none;
 }
 

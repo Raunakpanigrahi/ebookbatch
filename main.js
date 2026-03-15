@@ -9,6 +9,33 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 
+// ─── Library Management ───────────────────────────────────────────────────────
+const userDataPath = app.getPath('userData');
+const libraryDir = path.join(userDataPath, 'library');
+const coversDir = path.join(userDataPath, 'covers');
+const libraryDbPath = path.join(libraryDir, 'library.json');
+
+function ensureLibraryDirs() {
+  if (!fs.existsSync(libraryDir)) fs.mkdirSync(libraryDir, { recursive: true });
+  if (!fs.existsSync(coversDir)) fs.mkdirSync(coversDir, { recursive: true });
+  if (!fs.existsSync(libraryDbPath)) fs.writeFileSync(libraryDbPath, JSON.stringify([]));
+}
+
+function getLibraryDb() {
+  ensureLibraryDirs();
+  try {
+    const data = fs.readFileSync(libraryDbPath, 'utf8');
+    return JSON.parse(data);
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveLibraryDb(data) {
+  ensureLibraryDirs();
+  fs.writeFileSync(libraryDbPath, JSON.stringify(data, null, 2));
+}
+
 // Keep a global reference to prevent garbage collection
 let mainWindow;
 
@@ -44,7 +71,10 @@ function createWindow() {
   });
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  ensureLibraryDirs();
+  createWindow();
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
@@ -55,6 +85,84 @@ app.on('activate', () => {
 });
 
 // ─── IPC Handlers ─────────────────────────────────────────────────────────────
+
+/**
+ * Library IPC Handlers
+ */
+ipcMain.handle('library:getBooks', () => {
+  return getLibraryDb();
+});
+
+ipcMain.handle('library:addBook', (event, bookData) => {
+  const db = getLibraryDb();
+  const existing = db.find(b => b.filePath === bookData.filePath);
+  if (existing) return { success: false, error: 'Book already in library', book: existing };
+  
+  const newBook = {
+    id: bookData.id || Date.now().toString(36) + Math.random().toString(36).substr(2, 5),
+    title: bookData.title || 'Unknown Title',
+    author: bookData.author || 'Unknown Author',
+    filePath: bookData.filePath,
+    format: bookData.format || 'unknown',
+    coverImage: bookData.coverImage || null,
+    lastOpened: Date.now(),
+    readingProgress: null,
+    totalPages: bookData.totalPages || 0,
+    dateAdded: Date.now(),
+    bookmarks: [],
+    annotations: [],
+    highlights: []
+  };
+  db.push(newBook);
+  saveLibraryDb(db);
+  return { success: true, book: newBook };
+});
+
+ipcMain.handle('library:updateBook', (event, id, updates) => {
+  const db = getLibraryDb();
+  const index = db.findIndex(b => b.id === id);
+  if (index !== -1) {
+    db[index] = { ...db[index], ...updates };
+    saveLibraryDb(db);
+    return { success: true, book: db[index] };
+  }
+  return { success: false, error: 'Book not found' };
+});
+
+ipcMain.handle('library:removeBook', (event, id) => {
+  const db = getLibraryDb();
+  const index = db.findIndex(b => b.id === id);
+  if (index !== -1) {
+    const book = db[index];
+    if (book.coverImage && book.coverImage.includes(coversDir)) {
+      try { fs.unlinkSync(book.coverImage.replace('file://', '')); } catch(e) {}
+    }
+    db.splice(index, 1);
+    saveLibraryDb(db);
+    return { success: true };
+  }
+  return { success: false, error: 'Book not found' };
+});
+
+ipcMain.handle('library:saveCover', (event, bookId, base64Data) => {
+  ensureLibraryDirs();
+  const coverPath = path.join(coversDir, `cover_${bookId}.jpg`);
+  try {
+    const buffer = Buffer.from(base64Data, 'base64');
+    fs.writeFileSync(coverPath, buffer);
+    const db = getLibraryDb();
+    const index = db.findIndex(b => b.id === bookId);
+    if (index !== -1) {
+      const coverUrl = `file://${coverPath.replace(/\\/g, '/')}`;
+      db[index].coverImage = coverUrl;
+      saveLibraryDb(db);
+      return { success: true, coverUrl };
+    }
+    return { success: false, error: 'Book not found' };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
 
 /**
  * Open folder selection dialog

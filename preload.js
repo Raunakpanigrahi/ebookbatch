@@ -40,4 +40,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   maximizeWindow: () => ipcRenderer.invoke('window:maximize'),
   toggleFullscreen: () => ipcRenderer.invoke('window:toggleFullscreen'),
   closeWindow: () => ipcRenderer.invoke('window:close'),
+  
+  // ── Library ─────────────────────────────────────────────────────────
+  library: {
+    getBooks: () => ipcRenderer.invoke('library:getBooks'),
+    addBook: (bookData) => ipcRenderer.invoke('library:addBook', bookData),
+    updateBook: (id, updates) => ipcRenderer.invoke('library:updateBook', id, updates),
+    removeBook: (id) => ipcRenderer.invoke('library:removeBook', id),
+    saveCover: (bookId, base64Data) => ipcRenderer.invoke('library:saveCover', bookId, base64Data)
+  }
 });

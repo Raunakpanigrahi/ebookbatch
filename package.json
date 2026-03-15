@@ -5,10 +5,30 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "dev": "electron . --dev"
+    "dev": "electron . --dev",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "build:linux": "electron-builder --linux"
   },
   "author": "Raunak Panigrahi",
   "license": "MIT",
+  "build": {
+    "appId": "com.ebookbatch.app",
+    "productName": "EbookBatch",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  },
   "dependencies": {
     "archiver": "^6.0.1",
     "epubjs": "^0.3.93",
@@ -17,6 +37,7 @@
     "pdfjs-dist": "^3.11.174"
   },
   "devDependencies": {
-    "electron": "^28.0.0"
+    "electron": "^28.0.0",
+    "electron-builder": "^26.8.1"
   }
 }
