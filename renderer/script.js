@@ -1473,9 +1473,25 @@ async function openReader(file) {
   state.reader.pageNum = 1;
   state.reader.zoom = 1.0;
   
+  // Buffer structure
+  state.reader.buffer = {
+    prev: $('page-prev'),
+    current: $('page-current'),
+    next: $('page-next'),
+    pdfCache: new Map() // num -> Object{ canvasLeft, canvasRight }
+  };
+  
+  // Reset transitions
+  ['prev', 'current', 'next'].forEach(k => {
+    if (state.reader.buffer[k]) {
+      state.reader.buffer[k].className = `page-container page-${k}`;
+      state.reader.buffer[k].innerHTML = '';
+      state.reader.buffer[k].style.opacity = (k === 'current') ? '1' : '0';
+    }
+  });
+  
   els.readerOverlay.classList.remove('hidden');
   els.readerTitle.textContent = file.name;
-  els.readerContent.innerHTML = '';
   els.readerSettingsPanel.classList.add('hidden');
   els.readerPageInfo.textContent = 'Loading...';
 
@@ -1529,7 +1545,17 @@ function closeReader() {
   }
   state.reader.rendition = null;
   state.reader.pdfDoc = null;
-  els.readerContent.innerHTML = '';
+  
+  if (state.reader.buffer) {
+    state.reader.buffer.pdfCache.clear();
+    state.reader.buffer = null;
+  }
+  
+  els.readerContent.innerHTML = `
+    <div class="page-container page-prev" id="page-prev"></div>
+    <div class="page-container page-current" id="page-current"></div>
+    <div class="page-container page-next" id="page-next"></div>
+  `;
 }
 
 // -- EPUB --
@@ -1543,7 +1569,7 @@ function initEpubReader(arrayBuffer) {
   const book = ePub(arrayBuffer);
   state.reader.book = book;
   
-  const rendition = book.renderTo("reader-content", {
+  const rendition = book.renderTo("page-current", {
     width: "100%",
     height: "100%",
     spread: "auto",
@@ -1655,6 +1681,9 @@ function onReaderFontChange(delta) {
   
   if (state.reader.type === 'epub' && state.reader.rendition) {
     state.reader.rendition.themes.fontSize(`${state.reader.fontSize}%`);
+  } else if (state.reader.type === 'pdf') {
+    if (state.reader.buffer) state.reader.buffer.pdfCache.clear();
+    renderPdfPage(state.reader.pageNum);
   }
 }
 
@@ -1695,6 +1724,7 @@ function applyReaderFormatting() {
     if (state.reader.type === 'epub') {
       state.reader.rendition?.resize();
     } else if (state.reader.type === 'pdf') {
+      if (state.reader.buffer) state.reader.buffer.pdfCache.clear();
       renderPdfPage(state.reader.pageNum);
     }
   }, 150);
@@ -1724,8 +1754,15 @@ async function onToggleFullscreen() {
   } else {
     els.readerOverlay?.classList.remove('is-fullscreen');
   }
-  // Allow UI reflow before kicking the EPUB engine
-  setTimeout(() => state.reader.rendition?.resize(), 200);
+  // Allow UI reflow before kicking the engine
+  setTimeout(() => {
+    if (state.reader.type === 'pdf') {
+       if (state.reader.buffer) state.reader.buffer.pdfCache.clear();
+       renderPdfPage(state.reader.pageNum);
+    } else {
+       state.reader.rendition?.resize();
+    }
+  }, 200);
 }
 
 // -- PDF --
@@ -1760,12 +1797,13 @@ async function initPdfReader(bytes) {
 }
 
 async function renderPdfPage(num) {
-  if (!state.reader.pdfDoc) return;
-  els.readerContent.innerHTML = ''; // clear previous
+  if (!state.reader.pdfDoc || !state.reader.buffer) return;
   
-  // Determine if we need to show two pages or one
-  // Rule: Two pages if landscape AND width option permits it
+  // Clear only current container
+  state.reader.buffer.current.innerHTML = ''; 
+  
   const isLandscape = window.innerWidth > 1100 && (state.reader.widthMode === 'wide' || state.reader.widthMode === 'full');
+  const shift = isLandscape ? 2 : 1;
   
   els.readerPageInfo.textContent = isLandscape ? `Page ${num}-${Math.min(num + 1, state.reader.pageCount)} of ${state.reader.pageCount}` : `Page ${num} of ${state.reader.pageCount}`;
   
@@ -1777,38 +1815,74 @@ async function renderPdfPage(num) {
     if (barFill) barFill.style.width = `${progressPct}%`;
     updateReadingProgress(state.reader.file.id, num.toString(), progressPct);
   }
-  
-  try {
-    // Helper to render a single canvas page
-    const renderSinglePage = async (pageContextNum) => {
-      const page = await state.reader.pdfDoc.getPage(pageContextNum);
-      const viewport = page.getViewport({ scale: state.reader.zoom * 1.5 });
-      
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
-      canvas.style.maxWidth = "100%";
-      canvas.style.height = "auto";
-      canvas.style.objectFit = "contain";
-      
-      await page.render({ canvasContext: ctx, viewport }).promise;
-      return canvas;
-    };
 
-    // Render Left Page
-    const canvasLeft = await renderSinglePage(num);
-    els.readerContent.appendChild(canvasLeft);
+  // Pre-render core logic
+  const renderSinglePage = async (pageContextNum) => {
+    if (pageContextNum > state.reader.pageCount) return null;
+    const page = await state.reader.pdfDoc.getPage(pageContextNum);
+    const viewport = page.getViewport({ scale: state.reader.zoom * 1.5 });
     
-    // Render Right Page (If Landscape & Exists)
-    if (isLandscape && num + 1 <= state.reader.pageCount) {
-      const canvasRight = await renderSinglePage(num + 1);
-      els.readerContent.appendChild(canvasRight);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    canvas.style.maxWidth = "100%";
+    canvas.style.height = "auto";
+    canvas.style.objectFit = "contain";
+    
+    await page.render({ canvasContext: ctx, viewport }).promise;
+    return canvas;
+  };
+
+  const getCachedPages = async (targetNum) => {
+    if (targetNum < 1 || targetNum > state.reader.pageCount) return null;
+    if (state.reader.buffer.pdfCache.has(targetNum)) return state.reader.buffer.pdfCache.get(targetNum);
+    
+    const nodeData = {
+      left: await renderSinglePage(targetNum),
+      right: isLandscape ? await renderSinglePage(targetNum + 1) : null
+    };
+    
+    // Garbage collection (keep max 3 blocks)
+    if (state.reader.buffer.pdfCache.size >= 3) {
+      const keys = Array.from(state.reader.buffer.pdfCache.keys());
+      const furthest = keys.reduce((a, b) => Math.abs(a - targetNum) > Math.abs(b - targetNum) ? a : b);
+      state.reader.buffer.pdfCache.delete(furthest);
     }
     
-  } catch (err) {
-    console.error(err);
-  }
+    state.reader.buffer.pdfCache.set(targetNum, nodeData);
+    return nodeData;
+  };
+  
+  try {
+    // 1. Render Current
+    const currentNodes = await getCachedPages(num);
+    if (currentNodes) {
+      if (currentNodes.left) state.reader.buffer.current.appendChild(currentNodes.left);
+      if (currentNodes.right) state.reader.buffer.current.appendChild(currentNodes.right);
+    }
+    
+    // 2. Pre-render Async Boundaries
+    setTimeout(async () => {
+      const prevNum = num - shift;
+      const nextNum = num + shift;
+      
+      if (prevNum >= 1) {
+        state.reader.buffer.prev.innerHTML = '';
+        const prevNodes = await getCachedPages(prevNum);
+        if (prevNodes && prevNodes.left) state.reader.buffer.prev.appendChild(prevNodes.left.cloneNode(true));
+        if (prevNodes && prevNodes.right) state.reader.buffer.prev.appendChild(prevNodes.right.cloneNode(true));
+      }
+      
+      if (nextNum <= state.reader.pageCount) {
+        state.reader.buffer.next.innerHTML = '';
+        const nextNodes = await getCachedPages(nextNum);
+        if (nextNodes && nextNodes.left) state.reader.buffer.next.appendChild(nextNodes.left.cloneNode(true));
+        if (nextNodes && nextNodes.right) state.reader.buffer.next.appendChild(nextNodes.right.cloneNode(true));
+      }
+    }, 50); // small delay to release main thread for animations
+
+  } catch(e) { console.error('Render PDF page error:', e); }
 }
 
 function onZoomIn() {
@@ -1828,20 +1902,74 @@ function updatePdfZoom() {
   renderPdfPage(state.reader.pageNum);
 }
 
-// -- Navigation --
-function onReaderPrev() {
+// -- Navigation & Shifting --
+async function performPageShift(direction) {
+  if (state.reader.isShifting || !state.reader.buffer) return false;
+  
+  const { prev, current, next } = state.reader.buffer;
+  
+  // Abort if no preloaded content exists in target buffer
+  if (direction === 'next' && next.childElementCount === 0) return false;
+  if (direction === 'prev' && prev.childElementCount === 0) return false;
+  
+  state.reader.isShifting = true;
+  
+  if (direction === 'next') {
+    current.classList.add('shifting-left');
+    next.classList.remove('page-next');
+    next.classList.add('page-current');
+    
+    // Wait for CSS transition (0.3s matching styles.css)
+    await new Promise(r => setTimeout(r, 300));
+    
+    // Array reassignment
+    current.className = 'page-container page-prev';
+    prev.className = 'page-container page-next';
+    prev.innerHTML = ''; // clear old boundary
+    
+    state.reader.buffer = { prev: current, current: next, next: prev, pdfCache: state.reader.buffer.pdfCache };
+  } else {
+    current.classList.add('shifting-right');
+    prev.classList.remove('page-prev');
+    prev.classList.add('page-current');
+    
+    await new Promise(r => setTimeout(r, 300));
+    
+    current.className = 'page-container page-next';
+    next.className = 'page-container page-prev';
+    next.innerHTML = '';
+    
+    state.reader.buffer = { prev: next, current: prev, next: current, pdfCache: state.reader.buffer.pdfCache };
+  }
+  
+  state.reader.isShifting = false;
+  return true;
+}
+
+async function onReaderPrev() {
   if (state.reader.type === 'epub') {
     state.reader.rendition?.prev();
   } else if (state.reader.type === 'pdf') {
     if (state.reader.pageNum <= 1) return;
     const isLandscape = window.innerWidth > 1100 && (state.reader.widthMode === 'wide' || state.reader.widthMode === 'full');
     const shift = isLandscape ? 2 : 1;
-    state.reader.pageNum = Math.max(1, state.reader.pageNum - shift);
-    renderPdfPage(state.reader.pageNum);
+    
+    const targetPage = Math.max(1, state.reader.pageNum - shift);
+    
+    const animatedBuffer = await performPageShift('prev');
+    state.reader.pageNum = targetPage;
+    
+    if (animatedBuffer) {
+      // Background async boundary refill
+      renderPdfPage(state.reader.pageNum); 
+    } else {
+      // Fallback synchronous render if buffer failed to preload
+      renderPdfPage(state.reader.pageNum);
+    }
   }
 }
 
-function onReaderNext() {
+async function onReaderNext() {
   if (state.reader.type === 'epub') {
     state.reader.rendition?.next();
   } else if (state.reader.type === 'pdf') {
@@ -1849,8 +1977,16 @@ function onReaderNext() {
     const shift = isLandscape ? 2 : 1;
     if (state.reader.pageNum >= state.reader.pageCount) return;
     
-    state.reader.pageNum = Math.min(state.reader.pageCount, state.reader.pageNum + shift);
-    renderPdfPage(state.reader.pageNum);
+    const targetPage = Math.min(state.reader.pageCount, state.reader.pageNum + shift);
+    
+    const animatedBuffer = await performPageShift('next');
+    state.reader.pageNum = targetPage;
+    
+    if (animatedBuffer) {
+      renderPdfPage(state.reader.pageNum);
+    } else {
+      renderPdfPage(state.reader.pageNum);
+    }
   }
 }
 
@@ -1862,10 +1998,9 @@ window.addEventListener('resize', () => {
   clearTimeout(resizeTimer);
   resizeTimer = setTimeout(() => {
     if (state.reader.type === 'pdf') {
-      // Re-trigger render to swap double/single view dynamically
+      if (state.reader.buffer) state.reader.buffer.pdfCache.clear();
       renderPdfPage(state.reader.pageNum);
     } else if (state.reader.type === 'epub') {
-      // Force ePub.js to recalculate layout flow bounds on screen size shift
       state.reader.rendition?.resize();
     }
   }, 200);

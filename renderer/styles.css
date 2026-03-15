@@ -1590,6 +1590,10 @@ body,
   display: flex !important;
 }
 
+.reader-overlay.hidden * {
+  pointer-events: none !important;
+}
+
 /* Top Toolbar */
 .reader-toolbar {
   height: 52px;
@@ -1802,21 +1806,60 @@ body,
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 40px; /* Gap between dual-canvas PDFs */
+  position: relative;
+  overflow: hidden;
 }
 
-@keyframes pageFadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+/* 3-Page Buffer System */
+.page-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 40px; /* Gap between dual-canvas PDFs */
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(0);
+  transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.3s ease;
+  will-change: transform, opacity;
 }
+
+.page-current {
+  opacity: 1;
+  pointer-events: auto;
+  z-index: 2;
+  transform: translateX(0);
+}
+
+.page-prev {
+  transform: translateX(-100%);
+  z-index: 1;
+}
+
+.page-next {
+  transform: translateX(100%);
+  z-index: 1;
+}
+
+/* Slide Transition Animations (Triggered via JS class toggle) */
+.page-container.shifting-left { transform: translateX(-100%); opacity: 0; }
+.page-container.shifting-right { transform: translateX(100%); opacity: 0; }
 
 .reader-pages canvas {
-  animation: pageFadeIn 0.3s ease forwards;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
 }
 
-/* Clean Canvas Overrides */
+/* Clean Canvas/Iframe Overrides */
 .reader-pages iframe {
   border: none;
+  width: 100%;
+  height: 100%;
 }
 
 #reader-content canvas {
