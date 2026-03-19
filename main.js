@@ -153,7 +153,11 @@ ipcMain.handle('library:saveCover', (event, bookId, base64Data) => {
     const db = getLibraryDb();
     const index = db.findIndex(b => b.id === bookId);
     if (index !== -1) {
-      const coverUrl = `file://${coverPath.replace(/\\/g, '/')}`;
+      // Use 3 slashes (file:///) for Windows absolute paths.
+      // file://C:/... is WRONG — Chromium treats "C:" as the host authority.
+      // file:///C:/... is CORRECT for Windows absolute paths.
+      const forwardSlashPath = coverPath.replace(/\\/g, '/');
+      const coverUrl = `file:///${forwardSlashPath}`;
       db[index].coverImage = coverUrl;
       saveLibraryDb(db);
       return { success: true, coverUrl };

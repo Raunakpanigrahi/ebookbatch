@@ -177,14 +177,26 @@ const els = {
           renderLibraryGrid();
           showUI();
 
-          // ── CRITICAL: Trigger cover extraction for books missing a cover ──
-          // Previously loadCoversFor() was ONLY called from addFiles() (manual import).
-          // Books loaded from library at startup NEVER had covers extracted.
-          // This is why all [Cover] debug logs were absent — the code never ran.
-          const needsCovers = mapped.filter(f => !f.coverUrl);
-          console.log('[Cover] Books needing extraction at startup:', needsCovers.length);
+          // ── CRITICAL: Trigger cover extraction for books missing or with broken covers ──
+          // 'needsCover' catches two cases:
+          //   1. coverUrl is null/empty — never extracted
+          //   2. coverUrl starts with 'file://' (2 slashes) — old broken Windows path format.
+          //      Chromium treats 'file://C:/...' as host='C:' which is invalid.
+          //      Correct format is 'file:///C:/...' (3 slashes).
+          //      These are truthy strings so the old !f.coverUrl check missed them.
+          function isBrokenCoverUrl(url) {
+            if (!url) return true;
+            // Detect old 2-slash Windows paths: file://C:/ or file://d:/
+            if (/^file:\/\/[a-zA-Z]:/.test(url)) return true;
+            return false;
+          }
+          const needsCovers = mapped.filter(f => isBrokenCoverUrl(f.coverUrl));
+          console.log('[Cover] Books needing extraction at startup:', needsCovers.length,
+            '| Sample urls:', mapped.slice(0,3).map(f => f.coverUrl));
           if (needsCovers.length > 0) {
-            needsCovers.forEach(f => { f.coverLoading = true; });
+            // Clear the broken URL so placeholder shows while loading
+            needsCovers.forEach(f => { f.coverUrl = null; f.coverLoading = true; });
+            renderLibraryGrid(); // refresh to show placeholders immediately
             loadCoversFor(needsCovers);
           }
         } // end if (books && books.length > 0)
@@ -995,7 +1007,9 @@ function renderLibraryGrid() {
   for (const file of files) {
     let coverHtml = '';
     if (file.coverUrl) {
-      coverHtml = `<img src="${file.coverUrl}" class="book-cover" alt="Cover" />`;
+      coverHtml = `<img src="${file.coverUrl}" class="book-cover" alt="Cover"
+        onload="console.log('[Cover] IMG OK:', this.src.slice(0,60))"
+        onerror="console.error('[Cover] IMG FAIL:', this.src); this.style.display='none'; this.parentElement.classList.add('cover-error')" />`;
     } else {
       const hash = file.id.charCodeAt(0) % 5;
       const gradients = [
