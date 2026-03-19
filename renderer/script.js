@@ -19,13 +19,27 @@ const state = {
   elapsedTimer: null,
   // Reader state
   settings: {
+    // existing
     margins: true,
     textAlignmentOverride: false,
     autoSingleColumn: false,
     readAloudAutoScroll: true,
     searchEngine: 'google',
     dictionary: 'default',
-    pageTransition: 'slide'
+    pageTransition: 'slide',
+    // NEW
+    fontFamily: 'Georgia, serif',
+    fontSize: 100,
+    lineHeight: 1.6,
+    letterSpacing: 0,
+    wordSpacing: 0,
+    paragraphSpacing: 1,
+    theme: 'light',
+    brightness: 100,
+    sepia: 0,
+    scrollMode: false,
+    pageTurnArea: 'right',
+    animationSpeed: 300
   },
   reader: {
     active: false,
@@ -340,40 +354,83 @@ function bindEvents() {
   });
 
   // Settings Panel Events
-  const bindSettingToggle = (id, key) => {
+  const bindSettingToggle = (id, key, needsReflow = false) => {
     const el = $(id);
     if (el) {
       el.addEventListener('change', (e) => {
         state.settings[key] = e.target.checked;
         saveSettings();
         applySettings();
-        if (['margins', 'textAlignmentOverride', 'autoSingleColumn'].includes(key)) {
-          formatDebounceRefresh();
-        }
+        populateSettingsUI();
+        if (needsReflow) formatDebounceRefresh();
       });
     }
   };
 
-  const bindSettingSelect = (id, key) => {
+  const bindSettingSelect = (id, key, needsReflow = false) => {
     const el = $(id);
     if (el) {
       el.addEventListener('change', (e) => {
         state.settings[key] = e.target.value;
         saveSettings();
         applySettings();
-        // formatDebounceRefresh is only needed for layout-affecting settings
+        populateSettingsUI();
+        if (needsReflow) formatDebounceRefresh();
       });
     }
   };
 
-  bindSettingToggle('setting-margins', 'margins');
-  bindSettingToggle('setting-text-alignment', 'textAlignmentOverride');
-  bindSettingToggle('setting-auto-column', 'autoSingleColumn');
+  let sliderDebounce;
+  const bindSettingSlider = (id, key, displayId, needsReflow = false) => {
+    const el = $(id);
+    const displayEl = $(displayId);
+    if (el) {
+      el.addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value);
+        if (displayEl) displayEl.textContent = val;
+        
+        clearTimeout(sliderDebounce);
+        sliderDebounce = setTimeout(() => {
+          state.settings[key] = val;
+          saveSettings();
+          applySettings();
+          populateSettingsUI();
+          if (needsReflow) formatDebounceRefresh();
+        }, 100);
+      });
+    }
+  };
+
+  bindSettingToggle('setting-margins', 'margins', true);
+  bindSettingToggle('setting-text-alignment', 'textAlignmentOverride', true);
+  bindSettingToggle('setting-auto-column', 'autoSingleColumn', true);
   bindSettingToggle('setting-read-aloud', 'readAloudAutoScroll');
+  bindSettingToggle('setting-scroll-mode', 'scrollMode', true);
   
   bindSettingSelect('setting-search-engine', 'searchEngine');
   bindSettingSelect('setting-dictionary', 'dictionary');
   bindSettingSelect('setting-page-transition', 'pageTransition');
+  bindSettingSelect('setting-font-family', 'fontFamily', true);
+  bindSettingSelect('setting-page-turn-area', 'pageTurnArea');
+
+  bindSettingSlider('setting-font-size', 'fontSize', 'setting-val-fontsize', true);
+  bindSettingSlider('setting-line-height', 'lineHeight', 'setting-val-lineheight', true);
+  bindSettingSlider('setting-letter-spacing', 'letterSpacing', 'setting-val-letterspacing', true);
+  bindSettingSlider('setting-word-spacing', 'wordSpacing', 'setting-val-wordspacing', true);
+  bindSettingSlider('setting-paragraph-spacing', 'paragraphSpacing', 'setting-val-paragraphspacing', true);
+  bindSettingSlider('setting-brightness', 'brightness', 'setting-val-brightness');
+  bindSettingSlider('setting-sepia', 'sepia', 'setting-val-sepia');
+  bindSettingSlider('setting-animation-speed', 'animationSpeed', 'setting-val-animationspeed');
+
+  document.querySelectorAll('.theme-card').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const themeName = e.currentTarget.dataset.val;
+      state.settings.theme = themeName;
+      saveSettings();
+      applySettings();
+      populateSettingsUI();
+    });
+  });
 }
 
 // ─── Drag & Drop ──────────────────────────────────────────────────────────────
@@ -1709,78 +1766,40 @@ function initEpubReader(arrayBuffer) {
 }
 
 function onReaderThemeChange(themeName) {
-  state.reader.theme = themeName;
-  $('reader-overlay').setAttribute('data-reader-theme', themeName);
-  
-  if (state.reader.type === 'epub' && state.reader.rendition) {
-    state.reader.rendition.themes.select(themeName);
-  }
-  
-  // also adjust pdf background if dark mode
-  if (state.reader.type === 'pdf') {
-    if (themeName === 'dark') {
-      els.readerContent.style.filter = 'invert(0.9) hue-rotate(180deg)';
-    } else if (themeName === 'sepia') {
-      els.readerContent.style.filter = 'sepia(0.5) contrast(0.9)';
-    } else {
-      els.readerContent.style.filter = 'none';
-    }
-  }
+  state.settings.theme = themeName;
+  saveSettings();
+  applySettings();
+  populateSettingsUI();
 }
 
 function onReaderFontChange(delta) {
-  state.reader.fontSize = Math.max(50, Math.min(300, state.reader.fontSize + delta));
-  els.fontSizeDisplay.textContent = `${state.reader.fontSize}%`;
-  
-  if (state.reader.type === 'epub' && state.reader.rendition) {
-    state.reader.rendition.themes.fontSize(`${state.reader.fontSize}%`);
-  } else if (state.reader.type === 'pdf') {
-    if (state.reader.buffer) state.reader.buffer.pdfCache.clear();
-    renderPdfPage(state.reader.pageNum);
-  }
+  state.settings.fontSize = Math.max(80, Math.min(250, state.settings.fontSize + delta));
+  saveSettings();
+  applySettings();
+  populateSettingsUI();
+  formatDebounceRefresh();
 }
 
 function onReaderFormatChange() {
   const familyEl = $('reader-font-family');
   const lineEl = $('reader-line-spacing');
-  if (familyEl) state.reader.fontFamily = familyEl.value;
-  if (lineEl) state.reader.lineSpacing = lineEl.value;
+  if (familyEl) state.settings.fontFamily = familyEl.value;
+  if (lineEl) state.settings.lineHeight = parseFloat(lineEl.value);
   if (els.readerWidthControl) state.reader.widthMode = els.readerWidthControl.value;
   
-  localStorage.setItem('readerSettings', JSON.stringify({
-    fontFamily: state.reader.fontFamily,
-    lineSpacing: state.reader.lineSpacing,
-    widthMode: state.reader.widthMode
-  }));
-  
-  applyReaderFormatting();
+  saveSettings();
+  applySettings();
+  populateSettingsUI();
+  formatDebounceRefresh();
 }
 
 let formatDebounce;
 function applyReaderFormatting() {
   const container = document.querySelector('.reader-content-wrapper');
   if (container) {
-    container.style.fontFamily = state.reader.fontFamily;
-    container.style.lineHeight = state.reader.lineSpacing;
-    container.setAttribute('data-width-mode', state.reader.widthMode);
+    container.setAttribute('data-width-mode', state.reader.widthMode || 'medium');
   }
-  
-  if (state.reader.type === 'epub' && state.reader.rendition) {
-    state.reader.rendition.themes.font(state.reader.fontFamily);
-  }
-
-  // Debounce reflowing the content
-  clearTimeout(formatDebounce);
-  formatDebounce = setTimeout(() => {
-    if (!state.reader.active) return;
-    
-    if (state.reader.type === 'epub') {
-      state.reader.rendition?.resize();
-    } else if (state.reader.type === 'pdf') {
-      if (state.reader.buffer) state.reader.buffer.pdfCache.clear();
-      renderPdfPage(state.reader.pageNum);
-    }
-  }, 150);
+  formatDebounceRefresh();
 }
 
 function restoreReaderSettings() {
@@ -1809,7 +1828,20 @@ function validateSettings(settings) {
     readAloudAutoScroll: settings.readAloudAutoScroll !== undefined ? !!settings.readAloudAutoScroll : true,
     searchEngine: settings.searchEngine || "google",
     dictionary: settings.dictionary || "default",
-    pageTransition: ["none","slide","fade"].includes(settings.pageTransition) ? settings.pageTransition : "slide"
+    pageTransition: ["none","slide","fade"].includes(settings.pageTransition) ? settings.pageTransition : "slide",
+
+    fontFamily: settings.fontFamily || 'Georgia, serif',
+    fontSize: typeof settings.fontSize === 'number' ? settings.fontSize : 100,
+    lineHeight: typeof settings.lineHeight === 'number' ? settings.lineHeight : 1.6,
+    letterSpacing: typeof settings.letterSpacing === 'number' ? settings.letterSpacing : 0,
+    wordSpacing: typeof settings.wordSpacing === 'number' ? settings.wordSpacing : 0,
+    paragraphSpacing: typeof settings.paragraphSpacing === 'number' ? settings.paragraphSpacing : 1,
+    theme: ["light","dark","sepia"].includes(settings.theme) ? settings.theme : "light",
+    brightness: typeof settings.brightness === 'number' ? settings.brightness : 100,
+    sepia: typeof settings.sepia === 'number' ? settings.sepia : 0,
+    scrollMode: !!settings.scrollMode,
+    pageTurnArea: settings.pageTurnArea === 'both' ? 'both' : 'right',
+    animationSpeed: typeof settings.animationSpeed === 'number' ? settings.animationSpeed : 300
   };
 }
 
@@ -1829,26 +1861,125 @@ function saveSettings() {
 function populateSettingsUI() {
   const toggle = (id, val) => { const el = $(id); if (el) el.checked = val; };
   const select = (id, val) => { const el = $(id); if (el) el.value = val; };
+  const slider = (id, val) => { const el = $(id); if (el) el.value = val; };
+  const text = (id, val) => { const el = $(id); if (el) el.textContent = val; };
   
   toggle('setting-margins', state.settings.margins);
   toggle('setting-text-alignment', state.settings.textAlignmentOverride);
   toggle('setting-auto-column', state.settings.autoSingleColumn);
   toggle('setting-read-aloud', state.settings.readAloudAutoScroll);
+  toggle('setting-scroll-mode', state.settings.scrollMode);
+  
   select('setting-search-engine', state.settings.searchEngine);
   select('setting-dictionary', state.settings.dictionary);
   select('setting-page-transition', state.settings.pageTransition);
+  select('setting-font-family', state.settings.fontFamily);
+  select('setting-page-turn-area', state.settings.pageTurnArea);
+
+  slider('setting-font-size', state.settings.fontSize); text('setting-val-fontsize', state.settings.fontSize);
+  slider('setting-line-height', state.settings.lineHeight); text('setting-val-lineheight', state.settings.lineHeight);
+  slider('setting-letter-spacing', state.settings.letterSpacing); text('setting-val-letterspacing', state.settings.letterSpacing);
+  slider('setting-word-spacing', state.settings.wordSpacing); text('setting-val-wordspacing', state.settings.wordSpacing);
+  slider('setting-paragraph-spacing', state.settings.paragraphSpacing); text('setting-val-paragraphspacing', state.settings.paragraphSpacing);
+  slider('setting-brightness', state.settings.brightness); text('setting-val-brightness', state.settings.brightness);
+  slider('setting-sepia', state.settings.sepia); text('setting-val-sepia', state.settings.sepia);
+  slider('setting-animation-speed', state.settings.animationSpeed); text('setting-val-animationspeed', state.settings.animationSpeed);
+
+  // Theme cards
+  document.querySelectorAll('.theme-card').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.val === state.settings.theme);
+  });
+  
+  // Also perform a live preview update immediately
+  updateSettingsPreview();
+}
+
+function updateSettingsPreview() {
+  const block = $('settings-preview-block');
+  if (!block) return;
+  block.style.fontFamily = state.settings.fontFamily;
+  block.style.fontSize = `${state.settings.fontSize}%`;
+  block.style.lineHeight = state.settings.lineHeight;
+  block.style.letterSpacing = `${state.settings.letterSpacing}px`;
+  block.style.wordSpacing = `${state.settings.wordSpacing}px`;
+  
+  // Theme simulator
+  if (state.settings.theme === 'dark') {
+    block.style.background = '#12121e';
+    block.style.color = '#fff';
+  } else if (state.settings.theme === 'sepia') {
+    block.style.background = '#f4ecd8';
+    block.style.color = '#5b4636';
+  } else {
+    block.style.background = '#fff';
+    block.style.color = '#000';
+  }
 }
 
 let isApplyingSettings = false;
 function applySettings() {
   if (isApplyingSettings) return;
+  if (!state.reader || !state.reader.active || !state.reader.initialized) return;
+
+  isApplyingSettings = true;
 
   try {
-    if (!state.reader || !state.reader.active || !state.reader.initialized) return;
+    // 1. Sync state.reader
+    state.reader.fontFamily = state.settings.fontFamily;
+    state.reader.fontSize = state.settings.fontSize;
+    state.reader.lineHeight = state.settings.lineHeight;
+    state.reader.theme = state.settings.theme;
 
-    isApplyingSettings = true;
+    // 2. Apply theme
+    document.body.dataset.theme = state.settings.theme;
+    if (state.reader.type === 'epub' && state.reader.rendition) {
+      state.reader.rendition.themes.select(state.settings.theme);
+    }
+    const overlay = document.querySelector(".reader-overlay");
+    if (overlay) {
+      overlay.style.filter = `brightness(${state.settings.brightness}%) sepia(${state.settings.sepia}%)`;
+      overlay.setAttribute('data-reader-theme', state.settings.theme);
+    }
+    if (state.reader.type === 'pdf') {
+      const isDark = state.settings.theme === 'dark';
+      const isSepia = state.settings.theme === 'sepia';
+      els.readerContent.style.filter = isDark ? 'invert(0.9) hue-rotate(180deg)' : 
+                                      (isSepia ? 'sepia(0.5) contrast(0.9)' : 'none');
+    }
 
-    // Margins
+    // 3. Apply Typography
+    const wrapper = document.querySelector('.reader-content-wrapper');
+    if (wrapper) {
+      wrapper.style.fontFamily = state.settings.fontFamily;
+      wrapper.style.lineHeight = state.settings.lineHeight;
+      // Widthmode is still decoupled for now unless explicitly added to settings
+      wrapper.setAttribute('data-width-mode', state.reader.widthMode || 'medium');
+    }
+
+    if (state.reader.type === 'epub' && state.reader.rendition) {
+      state.reader.rendition.themes.default({
+        body: {
+          "font-family": state.settings.fontFamily,
+          "font-size": state.settings.fontSize + "%",
+          "line-height": state.settings.lineHeight,
+          "letter-spacing": state.settings.letterSpacing + "px",
+          "word-spacing": state.settings.wordSpacing + "px"
+        },
+        p: {
+          "margin-bottom": state.settings.paragraphSpacing + "em"
+        }
+      });
+      if (state.settings.textAlignmentOverride) {
+        state.reader.rendition.themes.register("alignment-override", {
+          "p, div": { "text-align": "justify !important" }
+        });
+        state.reader.rendition.themes.select("alignment-override");
+      }
+    } else if (state.reader.type === 'pdf') {
+      state.reader.zoom = state.settings.fontSize / 100;
+    }
+
+    // 4. Apply Layout
     const readerStage = document.querySelector('.reader-stage');
     if (readerStage) {
       if (state.settings.margins) {
@@ -1858,31 +1989,18 @@ function applySettings() {
       }
     }
 
-    // Text Alignment Override (EPUB ONLY)
     if (state.reader.type === 'epub' && state.reader.rendition) {
-      if (state.settings.textAlignmentOverride) {
-        state.reader.rendition.themes.register("alignment-override", {
-          "p, div": { "text-align": "justify !important" }
-        });
-        state.reader.rendition.themes.select("alignment-override");
-      } else {
-        state.reader.rendition.themes.select(state.reader.theme);
-      }
+      state.reader.rendition.flow(state.settings.scrollMode ? "scrolled" : "paginated");
+      state.reader.rendition.spread(state.settings.autoSingleColumn ? "none" : "auto");
+    } else if (state.reader.type === 'pdf') {
+       if (wrapper) wrapper.style.overflowY = state.settings.scrollMode ? "auto" : "hidden";
     }
 
-    // Auto Single Column
-    if (state.reader.type === 'epub' && state.reader.rendition) {
-      if (state.settings.autoSingleColumn) {
-        state.reader.rendition.spread("none");
-      } else {
-        state.reader.rendition.spread("auto");
-      }
-    }
-
-    // Page Transition
+    // 5. Apply Motion
     const readerPages = document.getElementById('reader-content');
     if (readerPages) {
       readerPages.className = `reader-pages transition-${state.settings.pageTransition}`;
+      document.body.style.setProperty('--animation-speed', `${state.settings.animationSpeed}ms`);
     }
 
   } catch (err) {
