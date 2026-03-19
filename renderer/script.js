@@ -18,8 +18,18 @@ const state = {
   completedCount: 0,
   elapsedTimer: null,
   // Reader state
+  settings: {
+    margins: true,
+    textAlignmentOverride: false,
+    autoSingleColumn: false,
+    readAloudAutoScroll: true,
+    searchEngine: 'google',
+    dictionary: 'default',
+    pageTransition: 'slide'
+  },
   reader: {
     active: false,
+    initialized: false,
     file: null,
     type: null, // 'pdf' or 'epub'
     book: null, // epub object
@@ -122,7 +132,9 @@ const els = {
   });
 
   const initializeUI = async () => {
+    loadSettings();
     bindEvents();
+    populateSettingsUI();
     restoreTheme();
     restoreReaderSettings();
     
@@ -314,6 +326,7 @@ function bindEvents() {
     });
   });
 
+
   // Home Empty State events (Event Delegation)
   document.addEventListener('click', async (e) => {
     // Add Files button
@@ -325,6 +338,42 @@ function bindEvents() {
       onSelectFolder();
     }
   });
+
+  // Settings Panel Events
+  const bindSettingToggle = (id, key) => {
+    const el = $(id);
+    if (el) {
+      el.addEventListener('change', (e) => {
+        state.settings[key] = e.target.checked;
+        saveSettings();
+        applySettings();
+        if (['margins', 'textAlignmentOverride', 'autoSingleColumn'].includes(key)) {
+          formatDebounceRefresh();
+        }
+      });
+    }
+  };
+
+  const bindSettingSelect = (id, key) => {
+    const el = $(id);
+    if (el) {
+      el.addEventListener('change', (e) => {
+        state.settings[key] = e.target.value;
+        saveSettings();
+        applySettings();
+        // formatDebounceRefresh is only needed for layout-affecting settings
+      });
+    }
+  };
+
+  bindSettingToggle('setting-margins', 'margins');
+  bindSettingToggle('setting-text-alignment', 'textAlignmentOverride');
+  bindSettingToggle('setting-auto-column', 'autoSingleColumn');
+  bindSettingToggle('setting-read-aloud', 'readAloudAutoScroll');
+  
+  bindSettingSelect('setting-search-engine', 'searchEngine');
+  bindSettingSelect('setting-dictionary', 'dictionary');
+  bindSettingSelect('setting-page-transition', 'pageTransition');
 }
 
 // ─── Drag & Drop ──────────────────────────────────────────────────────────────
@@ -1537,6 +1586,7 @@ async function openReader(file) {
 
 function closeReader() {
   state.reader.active = false;
+  state.reader.initialized = false;
   els.readerOverlay.classList.add('hidden');
   
   if (state.reader.book) {
@@ -1653,6 +1703,9 @@ function initEpubReader(arrayBuffer) {
   
   rendition.themes.select(state.reader.theme);
   rendition.themes.fontSize(`${state.reader.fontSize}%`);
+  
+  state.reader.initialized = true;
+  applySettings();
 }
 
 function onReaderThemeChange(themeName) {
@@ -1747,6 +1800,114 @@ function restoreReaderSettings() {
   } catch(e) {}
 }
 
+function validateSettings(settings) {
+  if (!settings) settings = {};
+  return {
+    margins: settings.margins !== undefined ? !!settings.margins : true,
+    textAlignmentOverride: !!settings.textAlignmentOverride,
+    autoSingleColumn: !!settings.autoSingleColumn,
+    readAloudAutoScroll: settings.readAloudAutoScroll !== undefined ? !!settings.readAloudAutoScroll : true,
+    searchEngine: settings.searchEngine || "google",
+    dictionary: settings.dictionary || "default",
+    pageTransition: ["none","slide","fade"].includes(settings.pageTransition) ? settings.pageTransition : "slide"
+  };
+}
+
+function loadSettings() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('appSettings'));
+    state.settings = validateSettings(saved);
+  } catch(e) {
+    state.settings = validateSettings({});
+  }
+}
+
+function saveSettings() {
+  localStorage.setItem('appSettings', JSON.stringify(state.settings));
+}
+
+function populateSettingsUI() {
+  const toggle = (id, val) => { const el = $(id); if (el) el.checked = val; };
+  const select = (id, val) => { const el = $(id); if (el) el.value = val; };
+  
+  toggle('setting-margins', state.settings.margins);
+  toggle('setting-text-alignment', state.settings.textAlignmentOverride);
+  toggle('setting-auto-column', state.settings.autoSingleColumn);
+  toggle('setting-read-aloud', state.settings.readAloudAutoScroll);
+  select('setting-search-engine', state.settings.searchEngine);
+  select('setting-dictionary', state.settings.dictionary);
+  select('setting-page-transition', state.settings.pageTransition);
+}
+
+let isApplyingSettings = false;
+function applySettings() {
+  if (isApplyingSettings) return;
+
+  try {
+    if (!state.reader || !state.reader.active || !state.reader.initialized) return;
+
+    isApplyingSettings = true;
+
+    // Margins
+    const readerStage = document.querySelector('.reader-stage');
+    if (readerStage) {
+      if (state.settings.margins) {
+        readerStage.classList.remove('reader-no-margins');
+      } else {
+        readerStage.classList.add('reader-no-margins');
+      }
+    }
+
+    // Text Alignment Override (EPUB ONLY)
+    if (state.reader.type === 'epub' && state.reader.rendition) {
+      if (state.settings.textAlignmentOverride) {
+        state.reader.rendition.themes.register("alignment-override", {
+          "p, div": { "text-align": "justify !important" }
+        });
+        state.reader.rendition.themes.select("alignment-override");
+      } else {
+        state.reader.rendition.themes.select(state.reader.theme);
+      }
+    }
+
+    // Auto Single Column
+    if (state.reader.type === 'epub' && state.reader.rendition) {
+      if (state.settings.autoSingleColumn) {
+        state.reader.rendition.spread("none");
+      } else {
+        state.reader.rendition.spread("auto");
+      }
+    }
+
+    // Page Transition
+    const readerPages = document.getElementById('reader-content');
+    if (readerPages) {
+      readerPages.className = `reader-pages transition-${state.settings.pageTransition}`;
+    }
+
+  } catch (err) {
+    console.error("Settings apply failed:", err);
+  } finally {
+    setTimeout(() => {
+      isApplyingSettings = false;
+    }, 200);
+  }
+}
+
+function formatDebounceRefresh() {
+  clearTimeout(formatDebounce);
+  formatDebounce = setTimeout(() => {
+    if (!state.reader.active) return;
+    if (state.reader.type === 'epub') {
+      state.reader.rendition?.resize();
+    } else if (state.reader.type === 'pdf') {
+       if (state.reader.buffer) state.reader.buffer.pdfCache.clear();
+       renderPdfPage(state.reader.pageNum);
+    }
+  }, 150);
+}
+
+
 async function onToggleFullscreen() {
   const isFS = await window.electronAPI.toggleFullscreen();
   if (isFS) {
@@ -1790,6 +1951,9 @@ async function initPdfReader(bytes) {
     els.pdfZoomLevel.textContent = `${Math.round(state.reader.zoom * 100)}%`;
     renderPdfPage(state.reader.pageNum);
     renderAnnotationsList();
+    
+    state.reader.initialized = true;
+    applySettings();
   } catch (err) {
     showToast('Failed to load PDF.', 'error');
     closeReader();
@@ -1802,7 +1966,7 @@ async function renderPdfPage(num) {
   // Clear only current container
   state.reader.buffer.current.innerHTML = ''; 
   
-  const isLandscape = window.innerWidth > 1100 && (state.reader.widthMode === 'wide' || state.reader.widthMode === 'full');
+  const isLandscape = window.innerWidth > 1100 && (state.reader.widthMode === 'wide' || state.reader.widthMode === 'full') && !state.settings.autoSingleColumn;
   const shift = isLandscape ? 2 : 1;
   
   els.readerPageInfo.textContent = isLandscape ? `Page ${num}-${Math.min(num + 1, state.reader.pageCount)} of ${state.reader.pageCount}` : `Page ${num} of ${state.reader.pageCount}`;
@@ -2278,6 +2442,38 @@ document.querySelectorAll('.library-toolbar .filter-tab').forEach(btn => {
 
 // Open file dialog from library "Add Books" button
 document.getElementById('btn-add-books')?.addEventListener('click', onSelectFiles);
+
+  // Settings listeners
+  ['setting-margins', 'setting-text-alignment', 'setting-auto-column', 'setting-read-aloud'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('change', (e) => {
+        const key = id === 'setting-margins' ? 'margins' :
+                    id === 'setting-text-alignment' ? 'textAlignmentOverride' :
+                    id === 'setting-auto-column' ? 'autoSingleColumn' : 'readAloudAutoScroll';
+        state.settings[key] = e.target.checked;
+        saveSettings();
+        applySettings();
+        if (id !== 'setting-read-aloud') {
+           formatDebounceRefresh();
+        }
+      });
+    }
+  });
+
+  ['setting-search-engine', 'setting-dictionary', 'setting-page-transition'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('change', (e) => {
+        const key = id === 'setting-search-engine' ? 'searchEngine' :
+                    id === 'setting-dictionary' ? 'dictionary' : 'pageTransition';
+        state.settings[key] = e.target.value;
+        saveSettings();
+        applySettings();
+      });
+    }
+  });
+
 
 // Initialize with home
 setTimeout(() => {

@@ -799,6 +799,109 @@ body {
 }
 
 /* ══════════════════════════════════════════════════════════════
+   SETTINGS UI TOGGLES & STYLES
+══════════════════════════════════════════════════════════════ */
+.settings-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--accent-light);
+  margin-bottom: 12px;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border-soft);
+  padding-bottom: 6px;
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 38px;
+  height: 20px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-switch .slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--bg-hover);
+  transition: .3s;
+  border-radius: 20px;
+  border: 1px solid var(--border-light);
+}
+
+.toggle-switch .slider:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 2px;
+  bottom: 2px;
+  background-color: var(--text-muted);
+  transition: .3s;
+  border-radius: 50%;
+}
+
+.toggle-switch input:checked + .slider {
+  background-color: var(--accent);
+  border-color: var(--accent);
+}
+
+.toggle-switch input:checked + .slider:before {
+  transform: translateX(18px);
+  background-color: white;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   APPLY SETTINGS LOGIC STYLES
+══════════════════════════════════════════════════════════════ */
+.reader-no-margins {
+  padding: 0 !important;
+}
+
+.reader-pages.transition-fade .page-container {
+  transition: opacity 0.3s ease !important;
+  transform: none !important;
+}
+
+.reader-pages.transition-slide .page-container {
+  transition: transform 0.3s ease !important;
+}
+
+.reader-pages.transition-none .page-container {
+  transition: none !important;
+  transform: none !important;
+  opacity: 1 !important;
+}
+
+/* Make fade transitions work by making containers absolute across the board for fade mode */
+.reader-pages.transition-fade .page-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  opacity: 0;
+}
+.reader-pages.transition-fade .page-current {
+  opacity: 1 !important;
+  z-index: 2;
+}
+.reader-pages.transition-fade .page-prev,
+.reader-pages.transition-fade .page-next {
+  opacity: 0 !important;
+  z-index: 1;
+}
+
+/* ══════════════════════════════════════════════════════════════
    BUTTONS
 ══════════════════════════════════════════════════════════════ */
 .btn {
