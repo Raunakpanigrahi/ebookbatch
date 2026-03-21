@@ -726,6 +726,9 @@ async function loadCoversFor(files) {
         // Surgical update: only repaint this book's card/row, not the whole grid
         updateRowCover(f.id);
         updateCardCover(f.id);
+        console.log('[COVER FINAL]', f.id, 
+          'coverUrl:', f.coverUrl?.substring(0, 60) ?? 'NULL',
+          'coverLoading:', f.coverLoading);
       }
     }
   } finally {
