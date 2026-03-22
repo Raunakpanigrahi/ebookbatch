@@ -2018,6 +2018,11 @@ window.goToLocation = (loc) => {
 
 // ─── Reader Implementation ────────────────────────────────────────────────────
 async function openReader(file) {
+  if (file.coverLoading === true) {
+    showToast('Cover loading, please wait...', 'info', 2000);
+    return;
+  }
+
   state.reader.active = true;
   state.reader.file = file;
   state.reader.type = file.type;
